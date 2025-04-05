@@ -48,7 +48,7 @@ pub enum TokenType {
     Eof,
 }
 
-enum Literal {
+pub enum Literal {
     Number(f64),
     String(String),
     Identifier,
@@ -59,4 +59,15 @@ pub struct Token {
     lexeme: String,
     literal: Literal,
     line: u32,
+}
+
+impl Token {
+    pub fn new(token_type: TokenType, lexeme: String, literal: Literal, line: u32) -> Token {
+        Token {
+            token_type,
+            lexeme,
+            literal,
+            line,
+        }
+    }
 }

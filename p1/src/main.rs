@@ -3,6 +3,7 @@ use std::{
     io::{self},
 };
 mod tokens;
+mod scanner;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
