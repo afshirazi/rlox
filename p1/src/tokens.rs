@@ -1,4 +1,4 @@
-pub enum Token {
+pub enum TokenType {
     // Single-character tokens.
     LeftParen,
     RightParen,
@@ -46,4 +46,17 @@ pub enum Token {
     While,
 
     Eof,
+}
+
+enum Literal {
+    Number(f64),
+    String(String),
+    Identifier,
+}
+
+pub struct Token {
+    token_type: TokenType,
+    lexeme: String,
+    literal: Literal,
+    line: u32,
 }

@@ -1,7 +1,6 @@
 use std::{
     env, fs,
     io::{self},
-    process::exit,
 };
 mod tokens;
 
