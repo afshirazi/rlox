@@ -32,7 +32,7 @@ fn run_prompt() {
     }
 }
 
-fn report(line: u32, where_in_line: &str, message: &str) {
+fn report(line: u32, loc_in_line: u32, chars_in_line: &str, message: &str) {
     //TODO: make better
-    eprintln!("[Line {line}]: Error at {where_in_line}. {message}.");
+    eprintln!("[Line {line}:{loc_in_line}] Error at {chars_in_line}: {message}.");
 }
