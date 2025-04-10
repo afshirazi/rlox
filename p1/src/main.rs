@@ -2,6 +2,8 @@ use std::{
     env, fs,
     io::{self},
 };
+
+use scanner::Scanner;
 mod scanner;
 mod tokens;
 
@@ -22,7 +24,7 @@ impl Lox {
 
     fn run_file(&self, file_name: &str) -> () {
         let file = fs::read_to_string(file_name).unwrap();
-        Self::run(&file);
+        self.run(&file);
     }
 
     fn run_prompt(&mut self) {
@@ -38,12 +40,12 @@ impl Lox {
                 return;
             }
 
-            Self::run(&input);
+            self.run(&input);
         }
     }
 
-    fn run(source: &str) {
-        // do something
+    fn run(&mut self, source: &str) {
+        let scanner = Scanner::new(source.to_owned(), self, &Self::report);
     }
 
     fn report(&mut self, line: u32, loc_in_line: u32, chars_in_line: &str, message: &str) {

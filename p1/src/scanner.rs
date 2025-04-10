@@ -1,4 +1,4 @@
-use crate::tokens::{Literal, Token, TokenType};
+use crate::{tokens::{Literal, Token, TokenType}, Lox};
 
 pub struct Scanner<'a> {
     source: String,
@@ -11,17 +11,19 @@ pub struct Scanner<'a> {
     start: u32,
     current: u32,
     line: u32,
-    report: &'a dyn Fn(u32, u32, &str, &str) -> (), // this feels stupid
+    lox: &'a mut Lox,
+    report: &'a dyn Fn(&mut Lox, u32, u32, &str, &str) -> (), // this feels stupid
 }
 
 impl<'a> Scanner<'a> {
-    pub fn new(source: String, report_fn: &'a dyn Fn(u32, u32, &str, &str) -> ()) -> Self {
+    pub fn new(source: String, lox: &'a mut Lox, report_fn: &'a dyn Fn(&mut Lox, u32, u32, &str, &str) -> ()) -> Self {
         Self {
             source: source,
             tokens: vec![],
             start: 0,
             current: 0,
             line: 0,
+            lox: lox,
             report: report_fn,
         }
     }
@@ -114,6 +116,7 @@ impl<'a> Scanner<'a> {
                     self.identifier();
                 } else {
                     (self.report)(
+                        self.lox,
                         self.line,
                         self.start,
                         &self.source[self.start as usize..self.current as usize],
@@ -166,6 +169,7 @@ impl<'a> Scanner<'a> {
 
         if self.is_at_end() {
             (self.report)(
+                self.lox,
                 self.line,
                 self.start,
                 &self.source[self.start as usize..self.current as usize],
@@ -195,6 +199,7 @@ impl<'a> Scanner<'a> {
             Ok(num) => num,
             Err(_) => {
                 (self.report)(
+                    self.lox,
                     self.line,
                     self.start,
                     &self.source[self.start as usize..self.current as usize],
