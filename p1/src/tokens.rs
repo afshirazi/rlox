@@ -51,7 +51,7 @@ pub enum TokenType {
 pub enum Literal {
     Number(f64),
     String(String),
-    Identifier,
+    Identifier(String),
 }
 
 pub struct Token {
