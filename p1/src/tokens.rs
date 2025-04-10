@@ -1,3 +1,4 @@
+#[derive(Debug)]
 pub enum TokenType {
     // Single-character tokens.
     LeftParen,
@@ -48,12 +49,14 @@ pub enum TokenType {
     Eof,
 }
 
+#[derive(Debug)]
 pub enum Literal {
     Number(f64),
     String(String),
     Identifier(String),
 }
 
+#[derive(Debug)]
 pub struct Token {
     token_type: TokenType,
     lexeme: String,

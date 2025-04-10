@@ -22,7 +22,7 @@ impl Lox {
         };
     }
 
-    fn run_file(&self, file_name: &str) -> () {
+    fn run_file(&mut self, file_name: &str) -> () {
         let file = fs::read_to_string(file_name).unwrap();
         self.run(&file);
     }
@@ -45,7 +45,9 @@ impl Lox {
     }
 
     fn run(&mut self, source: &str) {
-        let scanner = Scanner::new(source.to_owned(), self, &Self::report);
+        let mut scanner = Scanner::new(source.to_owned(), self, &Self::report);
+        scanner.scan_tokens();
+        scanner.tokens().iter().for_each(|token| println!("Token {:?}", token));
     }
 
     fn report(&mut self, line: u32, loc_in_line: u32, chars_in_line: &str, message: &str) {
