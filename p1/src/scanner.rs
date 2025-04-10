@@ -12,18 +12,18 @@ pub struct Scanner<'a> {
     current: u32,
     line: u32,
     lox: &'a mut Lox,
-    report: &'a dyn Fn(&mut Lox, u32, u32, &str, &str) -> (), // this feels stupid
+    report: &'a dyn Fn(&mut Lox, u32, u32, &str, &str), // this feels stupid
 }
 
 impl<'a> Scanner<'a> {
-    pub fn new(source: String, lox: &'a mut Lox, report_fn: &'a dyn Fn(&mut Lox, u32, u32, &str, &str) -> ()) -> Self {
+    pub fn new(source: String, lox: &'a mut Lox, report_fn: &'a dyn Fn(&mut Lox, u32, u32, &str, &str)) -> Self {
         Self {
-            source: source,
+            source,
             tokens: vec![],
             start: 0,
             current: 0,
             line: 0,
-            lox: lox,
+            lox,
             report: report_fn,
         }
     }
@@ -33,8 +33,8 @@ impl<'a> Scanner<'a> {
         &self.tokens
     }
 
-    pub fn scan_tokens(&mut self) -> () {
-        while (!self.is_at_end()) {
+    pub fn scan_tokens(&mut self) {
+        while !self.is_at_end() {
             self.start = self.current;
 
             self.scan_token();
@@ -49,7 +49,7 @@ impl<'a> Scanner<'a> {
         self.current as usize >= self.source.len()
     }
 
-    fn scan_token(&mut self) -> () {
+    fn scan_token(&mut self) {
         let c = self.advance();
 
         match c {
@@ -97,7 +97,7 @@ impl<'a> Scanner<'a> {
             }
             '/' => {
                 if self.match_token('/') {
-                    while !self.is_at_end() && !(self.peek() == '\n') {
+                    while !self.is_at_end() && self.peek() != '\n' {
                         self.advance();
                     }
                 } else {
@@ -128,9 +128,7 @@ impl<'a> Scanner<'a> {
     }
 
     fn match_token(&mut self, expected: char) -> bool {
-        if self.is_at_end() {
-            false
-        } else if self.peek() != expected {
+        if self.is_at_end() || self.peek() != expected {
             false
         } else {
             self.current += 1;
@@ -145,7 +143,7 @@ impl<'a> Scanner<'a> {
         c as char
     }
 
-    fn add_token(&mut self, token_type: TokenType, literal: Option<Literal>) -> () {
+    fn add_token(&mut self, token_type: TokenType, literal: Option<Literal>) {
         // note: will panic if start..current doesn't encompass a valid character sequence
         let text = &self.source[self.start as usize..self.current as usize]; // no off by one, advance() increments current by 1
         let token = Token::new(token_type, text.to_owned(), literal, self.line);
@@ -159,7 +157,7 @@ impl<'a> Scanner<'a> {
         self.source.as_bytes()[self.current as usize] as char
     }
 
-    fn string(&mut self) -> () {
+    fn string(&mut self) {
         while self.peek() != '"' && !self.is_at_end() {
             if self.peek() == '\n' {
                 self.line += 1;
@@ -184,12 +182,12 @@ impl<'a> Scanner<'a> {
         self.add_token(TokenType::String, Some(Literal::String(string)));
     }
 
-    fn number(&mut self) -> () {
+    fn number(&mut self) {
         while self.peek().is_ascii_digit() {
             self.advance();
         }
 
-        if (self.peek() == '.' && self.peekNext().is_ascii_digit()) {
+        if self.peek() == '.' && self.peek_next().is_ascii_digit() {
             while self.peek().is_ascii_digit() {
                 self.advance();
             }
@@ -211,14 +209,14 @@ impl<'a> Scanner<'a> {
         self.add_token(TokenType::Number, Some(Literal::Number(num)));
     }
 
-    fn peekNext(&self) -> char {
+    fn peek_next(&self) -> char {
         if (self.current + 1) as usize >= self.source.len() {
             return '\0';
         }
         self.source.as_bytes()[(self.current + 1) as usize] as char
     }
 
-    fn identifier(&mut self) -> () {
+    fn identifier(&mut self) {
         while self.peek().is_ascii_alphanumeric() {
             self.advance();
         }

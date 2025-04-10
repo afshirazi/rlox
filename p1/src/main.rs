@@ -8,12 +8,12 @@ mod scanner;
 mod tokens;
 
 struct Lox {
-    hasError: bool,
+    has_error: bool,
 }
 
 impl Lox {
-    fn init(args: Vec<String>) -> () {
-        let mut lox = Lox { hasError: false };
+    fn init(args: Vec<String>) {
+        let mut lox = Lox { has_error: false };
 
         match args.len() {
             1 => lox.run_prompt(),
@@ -22,7 +22,7 @@ impl Lox {
         };
     }
 
-    fn run_file(&mut self, file_name: &str) -> () {
+    fn run_file(&mut self, file_name: &str) {
         let file = fs::read_to_string(file_name).unwrap();
         self.run(&file);
     }
@@ -30,8 +30,8 @@ impl Lox {
     fn run_prompt(&mut self) {
         let mut input = String::new();
         loop {
-            if self.hasError {
-                self.hasError = false;
+            if self.has_error {
+                self.has_error = false;
             }
 
             input.clear();
@@ -53,7 +53,7 @@ impl Lox {
     fn report(&mut self, line: u32, loc_in_line: u32, chars_in_line: &str, message: &str) {
         //TODO: make better
         eprintln!("[Line {line}:{loc_in_line}] Error at {chars_in_line}: {message}.");
-        self.hasError = true;
+        self.has_error = true;
     }
 }
 
