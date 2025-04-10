@@ -1,4 +1,4 @@
-use crate::{tokens::{Literal, Token, TokenType}, Lox};
+use crate::tokens::{Literal, Token, TokenType};
 
 pub struct Scanner<'a> {
     source: String,
@@ -11,10 +11,10 @@ pub struct Scanner<'a> {
     start: u32,
     current: u32,
     line: u32,
-    report: &'a dyn Fn(u32, u32, &str, &str) -> () // this feels stupid
+    report: &'a dyn Fn(u32, u32, &str, &str) -> (), // this feels stupid
 }
 
-impl <'a> Scanner <'a> {
+impl<'a> Scanner<'a> {
     pub fn new(source: String, report_fn: &'a dyn Fn(u32, u32, &str, &str) -> ()) -> Self {
         Self {
             source: source,
@@ -22,7 +22,7 @@ impl <'a> Scanner <'a> {
             start: 0,
             current: 0,
             line: 0,
-            report: report_fn
+            report: report_fn,
         }
     }
 
@@ -61,38 +61,38 @@ impl <'a> Scanner <'a> {
             '+' => self.add_token(TokenType::Plus, None),
             ';' => self.add_token(TokenType::Semicolon, None),
             '*' => self.add_token(TokenType::Star, None),
-            '!' => self.add_token(
-                if self.match_token('=') {
+            '!' => {
+                let token_type = if self.match_token('=') {
                     TokenType::BangEqual
                 } else {
                     TokenType::Bang
-                },
-                None,
-            ),
-            '=' => self.add_token(
-                if self.match_token('=') {
+                };
+                self.add_token(token_type, None)
+            }
+            '=' => {
+                let token_type = if self.match_token('=') {
                     TokenType::EqualEqual
                 } else {
                     TokenType::Equal
-                },
-                None,
-            ),
-            '>' => self.add_token(
-                if self.match_token('=') {
+                };
+                self.add_token(token_type, None)
+            }
+            '>' => {
+                let token_type = if self.match_token('=') {
                     TokenType::GreaterEqual
                 } else {
                     TokenType::Greater
-                },
-                None,
-            ),
-            '<' => self.add_token(
-                if self.match_token('=') {
+                };
+                self.add_token(token_type, None)
+            }
+            '<' => {
+                let token_type = if self.match_token('=') {
                     TokenType::LessEqual
                 } else {
                     TokenType::Less
-                },
-                None,
-            ),
+                };
+                self.add_token(token_type, None)
+            }
             '/' => {
                 if self.match_token('/') {
                     while !self.is_at_end() && !(self.peek() == '\n') {
@@ -107,12 +107,20 @@ impl <'a> Scanner <'a> {
             ' ' => (),
             '\r' => (),
             '"' => self.string(),
-            _ => (self.report)(
-                self.line,
-                self.start,
-                &self.source[self.start as usize..self.current as usize],
-                "Unexpected character.",
-            ),
+            _ => {
+                if c.is_ascii_digit() {
+                    self.number();
+                } else if c.is_ascii_alphabetic() {
+                    self.identifier();
+                } else {
+                    (self.report)(
+                        self.line,
+                        self.start,
+                        &self.source[self.start as usize..self.current as usize],
+                        "Unexpected character.",
+                    );
+                }
+            }
         };
     }
 
@@ -157,7 +165,77 @@ impl <'a> Scanner <'a> {
         }
 
         if self.is_at_end() {
-            (self.report)(self.line, self.start, &self.source[self.start as usize..self.current as usize], "");
+            (self.report)(
+                self.line,
+                self.start,
+                &self.source[self.start as usize..self.current as usize],
+                "Unterminated string",
+            );
+        }
+
+        self.advance(); // consume closing "
+
+        let string = self.source[(self.start + 1) as usize..(self.current - 1) as usize].to_owned();
+
+        self.add_token(TokenType::String, Some(Literal::String(string)));
+    }
+
+    fn number(&mut self) -> () {
+        while self.peek().is_ascii_digit() {
+            self.advance();
+        }
+
+        if (self.peek() == '.' && self.peekNext().is_ascii_digit()) {
+            while self.peek().is_ascii_digit() {
+                self.advance();
+            }
+        }
+
+        let num = match self.source[self.start as usize..self.current as usize].parse::<f64>() {
+            Ok(num) => num,
+            Err(_) => {
+                (self.report)(
+                    self.line,
+                    self.start,
+                    &self.source[self.start as usize..self.current as usize],
+                    "Expected number but failed to parse.",
+                );
+                return;
+            }
+        };
+        self.add_token(TokenType::Number, Some(Literal::Number(num)));
+    }
+
+    fn peekNext(&self) -> char {
+        if (self.current + 1) as usize >= self.source.len() {
+            return '\0';
+        }
+        self.source.as_bytes()[(self.current + 1) as usize] as char
+    }
+
+    fn identifier(&mut self) -> () {
+        while self.peek().is_ascii_alphanumeric() {
+            self.advance();
+        }
+
+        match &self.source[self.start as usize..self.current as usize] {
+            "and" => self.add_token(TokenType::And, None),
+            "class" => self.add_token(TokenType::Class, None),
+            "else" => self.add_token(TokenType::Else, None),
+            "false" => self.add_token(TokenType::False, None),
+            "for" => self.add_token(TokenType::For, None),
+            "fun" => self.add_token(TokenType::Fun, None),
+            "if" => self.add_token(TokenType::If, None),
+            "nil" => self.add_token(TokenType::Nil, None),
+            "or" => self.add_token(TokenType::Or, None),
+            "print" => self.add_token(TokenType::Print, None),
+            "return" => self.add_token(TokenType::Return, None),
+            "super" => self.add_token(TokenType::Super, None),
+            "this" => self.add_token(TokenType::This, None),
+            "true" => self.add_token(TokenType::True, None),
+            "var" => self.add_token(TokenType::Var, None),
+            "while" => self.add_token(TokenType::While, None),
+            user_literal => self.add_token(TokenType::Identifier, Some(Literal::Identifier(user_literal.to_owned()))),
         }
     }
 }
