@@ -136,7 +136,6 @@ impl<'a> Scanner<'a> {
         }
     }
 
-    // TODO: horrible, figure out how to use an iterator instead
     fn advance(&mut self) -> char {
         let c = self.source.as_bytes()[self.current as usize];
         self.current += 1;
