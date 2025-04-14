@@ -6,6 +6,7 @@ use std::{
 use scanner::Scanner;
 mod scanner;
 mod tokens;
+mod expr;
 
 struct Lox {
     has_error: bool,
