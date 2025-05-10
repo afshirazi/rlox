@@ -76,7 +76,7 @@ impl Expr {
     }
 }
 
-enum Literal {
+pub enum Literal {
     Number(f64),
     String(String),
     True,
@@ -84,17 +84,23 @@ enum Literal {
     Nil,
 }
 
-enum UnaryOp {
+pub enum UnaryOp {
     Minus,
     Bang,
 }
 
-struct Unary {
+pub struct Unary {
     op: UnaryOp,
     expr: Box<Expr>,
 }
 
-enum BinaryOp {
+impl Unary {
+    pub fn new(op: UnaryOp, expr: Box<Expr>) -> Self {
+        Self { op, expr }
+    }
+}
+
+pub enum BinaryOp {
     EqualEqual,
     BangEqual,
     Less,
@@ -107,12 +113,24 @@ enum BinaryOp {
     Slash,
 }
 
-struct Binary {
+pub struct Binary {
     l_expr: Box<Expr>,
     op: BinaryOp,
     r_expr: Box<Expr>,
 }
 
-struct Grouping {
+impl Binary {
+    pub fn new(l_expr: Box<Expr>, op: BinaryOp, r_expr: Box<Expr>) -> Self {
+        Self { l_expr, op, r_expr }
+    }
+}
+
+pub struct Grouping {
     expr: Box<Expr>,
+}
+
+impl Grouping {
+    pub fn new(expr: Box<Expr>) -> Self {
+        Self { expr }
+    }
 }
