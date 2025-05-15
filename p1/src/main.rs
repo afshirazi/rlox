@@ -7,6 +7,7 @@ use scanner::Scanner;
 mod scanner;
 mod tokens;
 mod expr;
+mod parser;
 
 struct Lox {
     has_error: bool,
