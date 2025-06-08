@@ -110,12 +110,12 @@ impl<'a> Parser<'a> {
     fn unary(&mut self) -> Option<Expr> {
         match self.adv_if_match(&[TokenType::Minus, TokenType::Bang]) {
             true => {
-                let expr = self.unary()?;
                 let op = match self.previous().token_type {
                     TokenType::Minus => UnaryOp::Minus,
                     TokenType::Bang => UnaryOp::Bang,
                     _ => unreachable!(),
                 };
+                let expr = self.unary()?;
                 Some(Expr::Unary(Unary::new(op, Box::new(expr))))
             }
             false => Some(self.primary()?),
