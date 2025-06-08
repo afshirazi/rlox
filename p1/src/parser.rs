@@ -12,28 +12,35 @@ pub struct Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
-    fn expression(&mut self) -> Expr {
-        self.equality()
+    fn parse(&mut self) -> Expr {
+        match self.expression() {
+            Some(expr) => expr,
+            None => todo!(), // TODO: for later chapter
+        }
+    }
+
+    fn expression(&mut self) -> Option<Expr> {
+        Some(self.equality()?)
     }
 
     // comparison ( (== | !=) comparison ) *
-    fn equality(&mut self) -> Expr {
-        let mut expr = self.comparison();
+    fn equality(&mut self) -> Option<Expr> {
+        let mut expr = self.comparison()?;
         while self.adv_if_match(&[TokenType::EqualEqual, TokenType::BangEqual]) {
             let op = match self.previous().token_type {
                 TokenType::BangEqual => BinaryOp::BangEqual,
                 TokenType::EqualEqual => BinaryOp::EqualEqual,
                 _ => unreachable!(), // unreachable guaranteed by check in adv_if_match
             };
-            let right = self.comparison();
+            let right = self.comparison()?;
             expr = Expr::Binary(Binary::new(Box::new(expr), op, Box::new(right)));
         }
 
-        expr
+        Some(expr)
     }
 
-    fn comparison(&mut self) -> Expr {
-        let mut expr = self.term();
+    fn comparison(&mut self) -> Option<Expr> {
+        let mut expr = self.term()?;
 
         while self.adv_if_match(&[
             TokenType::Less,
@@ -48,15 +55,15 @@ impl<'a> Parser<'a> {
                 TokenType::GreaterEqual => BinaryOp::GreaterEqual,
                 _ => unreachable!(),
             };
-            let right = self.term();
+            let right = self.term()?;
             expr = Expr::Binary(Binary::new(Box::new(expr), op, Box::new(right)));
         }
 
-        expr
+        Some(expr)
     }
 
-    fn term(&mut self) -> Expr {
-        let mut expr = self.factor();
+    fn term(&mut self) -> Option<Expr> {
+        let mut expr = self.factor()?;
 
         while self.adv_if_match(&[TokenType::Minus, TokenType::Plus]) {
             let op = match self.previous().token_type {
@@ -64,15 +71,15 @@ impl<'a> Parser<'a> {
                 TokenType::Plus => BinaryOp::Plus,
                 _ => unreachable!(),
             };
-            let right = self.factor();
+            let right = self.factor()?;
             expr = Expr::Binary(Binary::new(Box::new(expr), op, Box::new(right)));
         }
 
-        expr
+        Some(expr)
     }
 
-    fn factor(&mut self) -> Expr {
-        let mut expr = self.unary();
+    fn factor(&mut self) -> Option<Expr> {
+        let mut expr = self.unary()?;
 
         while self.adv_if_match(&[TokenType::Slash, TokenType::Star]) {
             let op = match self.previous().token_type {
@@ -80,48 +87,48 @@ impl<'a> Parser<'a> {
                 TokenType::Star => BinaryOp::Star,
                 _ => unreachable!(),
             };
-            let right = self.unary();
+            let right = self.unary()?;
             expr = Expr::Binary(Binary::new(Box::new(expr), op, Box::new(right)));
         }
 
-        expr
+        Some(expr)
     }
 
-    fn unary(&mut self) -> Expr {
+    fn unary(&mut self) -> Option<Expr> {
         match self.adv_if_match(&[TokenType::Minus, TokenType::Bang]) {
             true => {
-                let expr = self.unary();
+                let expr = self.unary()?;
                 let op = match self.previous().token_type {
                     TokenType::Minus => UnaryOp::Minus,
                     TokenType::Bang => UnaryOp::Bang,
                     _ => unreachable!(),
                 };
-                Expr::Unary(Unary::new(op, Box::new(expr)))
+                Some(Expr::Unary(Unary::new(op, Box::new(expr))))
             }
-            false => self.primary(),
+            false => Some(self.primary()?),
         }
     }
 
-    fn primary(&mut self) -> Expr {
+    fn primary(&mut self) -> Option<Expr> {
         if self.adv_if_match(&[TokenType::False]) {
-            Expr::Literal(Literal::False)
+            Some(Expr::Literal(Literal::False))
         } else if self.adv_if_match(&[TokenType::True]) {
-            Expr::Literal(Literal::True)
+            Some(Expr::Literal(Literal::True))
         } else if self.adv_if_match(&[TokenType::Nil]) {
-            Expr::Literal(Literal::Nil)
+            Some(Expr::Literal(Literal::Nil))
         } else if self.adv_if_match(&[TokenType::Number, TokenType::String]) {
             let lit = match self.previous().literal.as_ref().unwrap() {
                 tokens::Literal::Number(n) => Literal::Number(*n),
                 tokens::Literal::String(s) => Literal::String(s.clone()),
                 _ => unreachable!(),
             };
-            Expr::Literal(lit)
+            Some(Expr::Literal(lit))
         } else if self.adv_if_match(&[TokenType::LeftParen]) {
-            let expr = self.expression();
-            self.consume_or_panic(TokenType::RightParen, "')' Expected after expression.");
-            expr
+            let expr = self.expression()?;
+            self.try_consume(TokenType::RightParen, "')' Expected after expression.")?;
+            Some(expr)
         } else {
-            panic!("wtf!!!");
+            panic!("wtf!!!"); //should do better error handling :)
         }
     }
 
@@ -161,12 +168,12 @@ impl<'a> Parser<'a> {
         self.previous()
     }
 
-    fn consume_or_panic(&mut self, token_type: TokenType, arg: &str) -> &Token {
+    fn try_consume(&mut self, token_type: TokenType, arg: &str) -> Option<&Token> {
         let peek = self.peek();
         let line = peek.line;
-        let chars_in_line = peek.lexeme.clone(); // don't remember if this is actually the chars in line lol
+        let chars_in_line = peek.lexeme.clone(); // don't remember if this is actually the chars in line lol AND I DONT EFFIN CARE!!!!!!!!!
         if self.check(&token_type) {
-            return self.advance();
+            return Some(self.advance());
         } else {
             (self.report) (self.lox,
                 line,
@@ -174,7 +181,7 @@ impl<'a> Parser<'a> {
                 &chars_in_line,
                 arg
             );
-            panic!()
+            None
         }
     }
 }
