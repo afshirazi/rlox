@@ -1,5 +1,5 @@
 use crate::{
-    expr::{Binary, BinaryOp, Expr, Literal, Unary, UnaryOp},
+    expr::{Binary, BinaryOp, Expr, Grouping, Literal, Unary, UnaryOp},
     tokens::{self, Token, TokenType},
     Lox,
 };
@@ -139,7 +139,7 @@ impl<'a> Parser<'a> {
         } else if self.adv_if_match(&[TokenType::LeftParen]) {
             let expr = self.expression()?;
             self.try_consume(TokenType::RightParen, "')' Expected after expression.")?;
-            Some(expr)
+            Some(Expr::Grouping(Grouping::new(Box::new(expr))))
         } else {
             panic!("wtf!!!"); //should do better error handling :)
         }
