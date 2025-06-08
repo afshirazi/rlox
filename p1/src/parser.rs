@@ -12,7 +12,20 @@ pub struct Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
-    fn parse(&mut self) -> Expr {
+    pub fn new(
+        tokens: Vec<Token>,
+        lox: &'a mut Lox,
+        report: &'a dyn Fn(&mut Lox, u32, u32, &str, &str),
+    ) -> Self {
+        Self {
+            tokens,
+            current: 0,
+            lox,
+            report,
+        }
+    }
+
+    pub fn parse(&mut self) -> Expr {
         match self.expression() {
             Some(expr) => expr,
             None => todo!(), // TODO: for later chapter
@@ -134,7 +147,7 @@ impl<'a> Parser<'a> {
 
     fn adv_if_match(&mut self, types: &[TokenType]) -> bool {
         for t in types {
-            if (self.check(t)) {
+            if self.check(t) {
                 self.advance();
                 return true;
             }
@@ -175,12 +188,7 @@ impl<'a> Parser<'a> {
         if self.check(&token_type) {
             return Some(self.advance());
         } else {
-            (self.report) (self.lox,
-                line,
-                0,
-                &chars_in_line,
-                arg
-            );
+            (self.report)(self.lox, line, 0, &chars_in_line, arg);
             None
         }
     }

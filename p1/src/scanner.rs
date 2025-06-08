@@ -1,4 +1,7 @@
-use crate::{tokens::{Literal, Token, TokenType}, Lox};
+use crate::{
+    tokens::{Literal, Token, TokenType},
+    Lox,
+};
 
 pub struct Scanner<'a> {
     source: String,
@@ -16,7 +19,11 @@ pub struct Scanner<'a> {
 }
 
 impl<'a> Scanner<'a> {
-    pub fn new(source: String, lox: &'a mut Lox, report_fn: &'a dyn Fn(&mut Lox, u32, u32, &str, &str)) -> Self {
+    pub fn new(
+        source: String,
+        lox: &'a mut Lox,
+        report_fn: &'a dyn Fn(&mut Lox, u32, u32, &str, &str),
+    ) -> Self {
         Self {
             source,
             tokens: vec![],
@@ -29,8 +36,9 @@ impl<'a> Scanner<'a> {
     }
 
     //TODO: can be abstracted into a separate type-state, e.g. ScannedTokens?
-    pub fn tokens(&self) -> &[Token] {
-        &self.tokens
+    // consumes, scanner presumably won't be used after getting the tokens
+    pub fn tokens(self) -> Vec<Token> {
+        self.tokens
     }
 
     pub fn scan_tokens(&mut self) {
@@ -237,7 +245,10 @@ impl<'a> Scanner<'a> {
             "true" => self.add_token(TokenType::True, None),
             "var" => self.add_token(TokenType::Var, None),
             "while" => self.add_token(TokenType::While, None),
-            user_literal => self.add_token(TokenType::Identifier, Some(Literal::Identifier(user_literal.to_owned()))),
+            user_literal => self.add_token(
+                TokenType::Identifier,
+                Some(Literal::Identifier(user_literal.to_owned())),
+            ),
         }
     }
 }

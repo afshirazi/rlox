@@ -3,11 +3,13 @@ use std::{
     io::{self},
 };
 
+use parser::Parser;
 use scanner::Scanner;
-mod scanner;
-mod tokens;
+
 mod expr;
 mod parser;
+mod scanner;
+mod tokens;
 
 struct Lox {
     has_error: bool,
@@ -49,7 +51,11 @@ impl Lox {
     fn run(&mut self, source: &str) {
         let mut scanner = Scanner::new(source.to_owned(), self, &Self::report);
         scanner.scan_tokens();
-        scanner.tokens().iter().for_each(|token| println!("Token {:?}", token));
+        let tokens = scanner.tokens();
+        // scanner.tokens().iter().for_each(|token| println!("Token {:?}", token));
+        let mut parser = Parser::new(tokens, self, &Self::report);
+        let ast = parser.parse().print_ast();
+        println!("{ast}");
     }
 
     fn report(&mut self, line: u32, loc_in_line: u32, chars_in_line: &str, message: &str) {

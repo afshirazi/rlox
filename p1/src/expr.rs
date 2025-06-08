@@ -6,7 +6,7 @@ pub enum Expr {
 }
 
 impl Expr {
-    fn print_ast(&self) -> String {
+    pub fn print_ast(&self) -> String {
         match self {
             Expr::Literal(literal) => match literal {
                 Literal::Number(n) => n.to_string(),
