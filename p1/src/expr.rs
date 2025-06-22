@@ -11,7 +11,7 @@ impl Expr {
             Expr::Literal(literal) => match literal {
                 Literal::Number(n) => n.to_string(),
                 Literal::String(s) => s.clone(),
-                Literal::Boolean(b) => b.to_string().to_owned(),
+                Literal::Boolean(b) => b.to_string(),
                 Literal::Nil => "nil".to_owned(),
             },
             Expr::Unary(unary) => match unary.op {
