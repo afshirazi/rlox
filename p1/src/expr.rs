@@ -90,15 +90,50 @@ impl Expr {
                     },
                     UnaryOp::Bang => {
                         match unary.expr.interpret_ast()? { // much stricter than the book's implementation
-                            Literal::False => Ok(Literal::True),
-                            Literal::True => Ok(Literal::False),
+                            Literal::Boolean(b) => Ok(Literal::Boolean(!b)),
                             other => Err(format!("Expected a boolean value but got {:?}", other)) 
                         }
                     },
                 }
             },
             Expr::Binary(binary) => {
-                
+                let l = binary.l_expr.interpret_ast()?;
+                let r = binary.r_expr.interpret_ast()?;
+                match (l, r) {
+                    (Literal::Number(ln), Literal::Number(rn)) => match binary.op {
+                        BinaryOp::EqualEqual => Ok(Literal::Boolean(ln == rn)),
+                        BinaryOp::BangEqual => Ok(Literal::Boolean(ln != rn)),
+                        BinaryOp::Less => Ok(Literal::Boolean(ln < rn)),
+                        BinaryOp::LessEqual => Ok(Literal::Boolean(ln <= rn)),
+                        BinaryOp::Greater => Ok(Literal::Boolean(ln > rn)),
+                        BinaryOp::GreaterEqual => Ok(Literal::Boolean(ln >= rn)),
+                        BinaryOp::Plus => Ok(Literal::Number(ln + rn)),
+                        BinaryOp::Minus => Ok(Literal::Number(ln - rn)),
+                        BinaryOp::Star => Ok(Literal::Number(ln * rn)),
+                        BinaryOp::Slash => Ok(Literal::Number(ln / rn)),
+                    },
+                    (Literal::String(ls), Literal::String(rs)) => match binary.op {
+                        BinaryOp::Plus => Ok(Literal::String(ls + &rs)),
+                        bad_op => Err(format!("Operation {:?} not supported for Strings", bad_op))
+                    },
+                    (Literal::Boolean(lb), Literal::Boolean(rb)) => match binary.op {
+                        BinaryOp::EqualEqual => Ok(Literal::Boolean(lb == rb)),
+                        BinaryOp::BangEqual => Ok(Literal::Boolean(lb != rb)),
+                        bad_op => Err(format!("Operation {:?} not supported for Booleans", bad_op))
+                    },
+                    (Literal::Nil, Literal::Nil) => match binary.op {
+                        BinaryOp::EqualEqual => Ok(Literal::Boolean(true)),
+                        BinaryOp::BangEqual => Ok(Literal::Boolean(false)),
+                        bad_op => Err(format!("Operation {:?} not supported for Booleans", bad_op))
+                    },
+                    (mismatch_l, mismatch_r) => {
+                        match binary.op {
+                            BinaryOp::EqualEqual => Ok(Literal::Boolean(false)),
+                            BinaryOp::BangEqual => Ok(Literal::Boolean(true)),
+                            _ => Err(format!("Mismatched types: left was {:?} while right was {:?}", mismatch_l, mismatch_r))
+                        }
+                    }
+                }
             },
             Expr::Grouping(grouping) => {
                 Ok(grouping.expr.interpret_ast()?)
@@ -111,8 +146,7 @@ impl Expr {
 pub enum Literal {
     Number(f64),
     String(String),
-    True,
-    False,
+    Boolean(bool),
     Nil,
 }
 
@@ -132,6 +166,7 @@ impl Unary {
     }
 }
 
+#[derive(Debug)]
 pub enum BinaryOp {
     EqualEqual,
     BangEqual,
