@@ -124,9 +124,9 @@ impl<'a> Parser<'a> {
 
     fn primary(&mut self) -> Option<Expr> {
         if self.adv_if_match(&[TokenType::False]) {
-            Some(Expr::Literal(Literal::False))
+            Some(Expr::Literal(Literal::Boolean(false)))
         } else if self.adv_if_match(&[TokenType::True]) {
-            Some(Expr::Literal(Literal::True))
+            Some(Expr::Literal(Literal::Boolean(true)))
         } else if self.adv_if_match(&[TokenType::Nil]) {
             Some(Expr::Literal(Literal::Nil))
         } else if self.adv_if_match(&[TokenType::Number, TokenType::String]) {
