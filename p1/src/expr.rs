@@ -74,8 +74,40 @@ impl Expr {
             Expr::Grouping(grouping) => format!("(group {})", grouping.expr.print_ast()),
         }
     }
+
+    pub fn interpret_ast(self) -> Result<Literal, String> {
+        match self {
+            Expr::Literal(literal) => {
+                Ok(literal)
+            },
+            Expr::Unary(unary) => {
+                match unary.op {
+                    UnaryOp::Minus => {
+                        match unary.expr.interpret_ast()? {
+                            Literal::Number(n) => Ok(Literal::Number(-n)),
+                            other => Err(format!("Expected a number but got {:?}", other)) 
+                        }
+                    },
+                    UnaryOp::Bang => {
+                        match unary.expr.interpret_ast()? { // much stricter than the book's implementation
+                            Literal::False => Ok(Literal::True),
+                            Literal::True => Ok(Literal::False),
+                            other => Err(format!("Expected a boolean value but got {:?}", other)) 
+                        }
+                    },
+                }
+            },
+            Expr::Binary(binary) => {
+                
+            },
+            Expr::Grouping(grouping) => {
+                Ok(grouping.expr.interpret_ast()?)
+            },
+        }
+    }
 }
 
+#[derive(Debug)]
 pub enum Literal {
     Number(f64),
     String(String),
