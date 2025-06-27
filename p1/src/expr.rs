@@ -110,6 +110,8 @@ impl Expr {
                     },
                     (Literal::String(ls), Literal::String(rs)) => match binary.op {
                         BinaryOp::Plus => Ok(Literal::String(ls + &rs)),
+                        BinaryOp::EqualEqual => Ok(Literal::Boolean(ls == rs)),
+                        BinaryOp::BangEqual => Ok(Literal::Boolean(ls != rs)),
                         bad_op => Err(format!("Operation {:?} not supported for Strings", bad_op)),
                     },
                     (Literal::Boolean(lb), Literal::Boolean(rb)) => match binary.op {
