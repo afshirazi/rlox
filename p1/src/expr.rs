@@ -76,25 +76,22 @@ impl Expr {
 
     pub fn interpret_ast(self) -> Result<Literal, String> {
         match self {
-            Expr::Literal(literal) => {
-                Ok(literal)
-            },
+            Expr::Literal(literal) => Ok(literal),
             Expr::Unary(unary) => {
                 match unary.op {
-                    UnaryOp::Minus => {
-                        match unary.expr.interpret_ast()? {
-                            Literal::Number(n) => Ok(Literal::Number(-n)),
-                            other => Err(format!("Expected a number but got {:?}", other)) 
-                        }
+                    UnaryOp::Minus => match unary.expr.interpret_ast()? {
+                        Literal::Number(n) => Ok(Literal::Number(-n)),
+                        other => Err(format!("Expected a number but got {:?}", other)),
                     },
                     UnaryOp::Bang => {
-                        match unary.expr.interpret_ast()? { // much stricter than the book's implementation
+                        match unary.expr.interpret_ast()? {
+                            // much stricter than the book's implementation
                             Literal::Boolean(b) => Ok(Literal::Boolean(!b)),
-                            other => Err(format!("Expected a boolean value but got {:?}", other)) 
+                            other => Err(format!("Expected a boolean value but got {:?}", other)),
                         }
-                    },
+                    }
                 }
-            },
+            }
             Expr::Binary(binary) => {
                 let l = binary.l_expr.interpret_ast()?;
                 let r = binary.r_expr.interpret_ast()?;
@@ -113,30 +110,40 @@ impl Expr {
                     },
                     (Literal::String(ls), Literal::String(rs)) => match binary.op {
                         BinaryOp::Plus => Ok(Literal::String(ls + &rs)),
-                        bad_op => Err(format!("Operation {:?} not supported for Strings", bad_op))
+                        bad_op => Err(format!("Operation {:?} not supported for Strings", bad_op)),
                     },
                     (Literal::Boolean(lb), Literal::Boolean(rb)) => match binary.op {
                         BinaryOp::EqualEqual => Ok(Literal::Boolean(lb == rb)),
                         BinaryOp::BangEqual => Ok(Literal::Boolean(lb != rb)),
-                        bad_op => Err(format!("Operation {:?} not supported for Booleans", bad_op))
+                        bad_op => Err(format!("Operation {:?} not supported for Booleans", bad_op)),
                     },
                     (Literal::Nil, Literal::Nil) => match binary.op {
                         BinaryOp::EqualEqual => Ok(Literal::Boolean(true)),
                         BinaryOp::BangEqual => Ok(Literal::Boolean(false)),
-                        bad_op => Err(format!("Operation {:?} not supported for Booleans", bad_op))
+                        bad_op => Err(format!("Operation {:?} not supported for Booleans", bad_op)),
                     },
-                    (mismatch_l, mismatch_r) => {
-                        match binary.op {
-                            BinaryOp::EqualEqual => Ok(Literal::Boolean(false)),
-                            BinaryOp::BangEqual => Ok(Literal::Boolean(true)),
-                            _ => Err(format!("Mismatched types: left was {:?} while right was {:?}", mismatch_l, mismatch_r))
-                        }
-                    }
+                    (mismatch_l, mismatch_r) => match binary.op {
+                        BinaryOp::EqualEqual => Ok(Literal::Boolean(false)),
+                        BinaryOp::BangEqual => Ok(Literal::Boolean(true)),
+                        _ => Err(format!(
+                            "Mismatched types: left was {:?} while right was {:?}",
+                            mismatch_l, mismatch_r
+                        )),
+                    },
                 }
-            },
-            Expr::Grouping(grouping) => {
-                Ok(grouping.expr.interpret_ast()?)
-            },
+            }
+            Expr::Grouping(grouping) => Ok(grouping.expr.interpret_ast()?),
+        }
+    }
+}
+
+impl ToString for Literal {
+    fn to_string(&self) -> String {
+        match self {
+            Literal::Number(n) => n.to_string(),
+            Literal::String(s) => s.clone(),
+            Literal::Boolean(b) => b.to_string(),
+            Literal::Nil => "nil".to_owned(),
         }
     }
 }

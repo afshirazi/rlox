@@ -54,8 +54,15 @@ impl Lox {
         let tokens = scanner.tokens();
         // scanner.tokens().iter().for_each(|token| println!("Token {:?}", token));
         let mut parser = Parser::new(tokens, self, &Self::report);
-        let ast = parser.parse().print_ast();
-        println!("{ast}");
+        // let ast = parser.parse().print_ast();
+        // println!("{ast}");
+
+        let eval_ast = parser
+            .parse()
+            .interpret_ast()
+            .map(|literal| literal.to_string())
+            .unwrap_or_else(|err| err);
+        println!("Evaluated experession: {eval_ast}");
     }
 
     fn report(&mut self, line: u32, loc_in_line: u32, chars_in_line: &str, message: &str) {
