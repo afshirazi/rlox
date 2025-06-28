@@ -128,7 +128,7 @@ impl<'a> Scanner<'a> {
                         self.line,
                         self.start,
                         &self.source[self.start as usize..self.current as usize],
-                        "Unexpected character.",
+                        "Unexpected character",
                     );
                 }
             }
@@ -208,7 +208,7 @@ impl<'a> Scanner<'a> {
                     self.line,
                     self.start,
                     &self.source[self.start as usize..self.current as usize],
-                    "Expected number but failed to parse.",
+                    "Expected number but failed to parse",
                 );
                 return;
             }

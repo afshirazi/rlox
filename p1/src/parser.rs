@@ -138,10 +138,11 @@ impl<'a> Parser<'a> {
             Some(Expr::Literal(lit))
         } else if self.adv_if_match(&[TokenType::LeftParen]) {
             let expr = self.expression()?;
-            self.try_consume(TokenType::RightParen, "')' Expected after expression.")?;
+            self.try_consume(TokenType::RightParen, "')' Expected after expression")?;
             Some(Expr::Grouping(Grouping::new(Box::new(expr))))
         } else {
-            panic!("wtf!!!"); //should do better error handling :)
+            (self.report)(self.lox, self.tokens[self.current as usize].line, 0, &self.tokens[self.current as usize].lexeme, "Unexpected character encountered");
+            None
         }
     }
 
