@@ -1,3 +1,5 @@
+use std::fmt;
+
 pub enum Expr {
     Literal(Literal),
     Unary(Unary),
@@ -81,13 +83,13 @@ impl Expr {
                 match unary.op {
                     UnaryOp::Minus => match unary.expr.interpret_ast()? {
                         Literal::Number(n) => Ok(Literal::Number(-n)),
-                        other => Err(format!("Expected a number but got {:?}", other)),
+                        other => Err(format!("Expected a number but got {}", other)),
                     },
                     UnaryOp::Bang => {
                         match unary.expr.interpret_ast()? {
                             // much stricter than the book's implementation
                             Literal::Boolean(b) => Ok(Literal::Boolean(!b)),
-                            other => Err(format!("Expected a boolean value but got {:?}", other)),
+                            other => Err(format!("Expected a boolean value but got {}", other)),
                         }
                     }
                 }
@@ -112,23 +114,23 @@ impl Expr {
                         BinaryOp::Plus => Ok(Literal::String(ls + &rs)),
                         BinaryOp::EqualEqual => Ok(Literal::Boolean(ls == rs)),
                         BinaryOp::BangEqual => Ok(Literal::Boolean(ls != rs)),
-                        bad_op => Err(format!("Operation {:?} not supported for Strings", bad_op)),
+                        bad_op => Err(format!("Operation {} not supported for Strings", bad_op)),
                     },
                     (Literal::Boolean(lb), Literal::Boolean(rb)) => match binary.op {
                         BinaryOp::EqualEqual => Ok(Literal::Boolean(lb == rb)),
                         BinaryOp::BangEqual => Ok(Literal::Boolean(lb != rb)),
-                        bad_op => Err(format!("Operation {:?} not supported for Booleans", bad_op)),
+                        bad_op => Err(format!("Operation {} not supported for Booleans", bad_op)),
                     },
                     (Literal::Nil, Literal::Nil) => match binary.op {
                         BinaryOp::EqualEqual => Ok(Literal::Boolean(true)),
                         BinaryOp::BangEqual => Ok(Literal::Boolean(false)),
-                        bad_op => Err(format!("Operation {:?} not supported for Booleans", bad_op)),
+                        bad_op => Err(format!("Operation {} not supported for Booleans", bad_op)),
                     },
                     (mismatch_l, mismatch_r) => match binary.op {
                         BinaryOp::EqualEqual => Ok(Literal::Boolean(false)),
                         BinaryOp::BangEqual => Ok(Literal::Boolean(true)),
                         _ => Err(format!(
-                            "Mismatched types: left was {:?} while right was {:?}",
+                            "Mismatched types: left was {} while right was {}",
                             mismatch_l, mismatch_r
                         )),
                     },
@@ -139,23 +141,23 @@ impl Expr {
     }
 }
 
-impl ToString for Literal {
-    fn to_string(&self) -> String {
-        match self {
-            Literal::Number(n) => n.to_string(),
-            Literal::String(s) => s.clone(),
-            Literal::Boolean(b) => b.to_string(),
-            Literal::Nil => "nil".to_owned(),
-        }
-    }
-}
-
 #[derive(Debug)]
 pub enum Literal {
     Number(f64),
     String(String),
     Boolean(bool),
     Nil,
+}
+
+impl fmt::Display for Literal {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Literal::Number(n) => write!(f, "{}", n),
+            Literal::String(s) => write!(f, "{}", s),
+            Literal::Boolean(b) => write!(f, "{}", b),
+            Literal::Nil => write!(f, "nil"),
+        }
+    }
 }
 
 pub enum UnaryOp {
@@ -186,6 +188,23 @@ pub enum BinaryOp {
     Minus,
     Star,
     Slash,
+}
+
+impl fmt::Display for BinaryOp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            BinaryOp::EqualEqual => write!(f, "{}", "=="),
+            BinaryOp::BangEqual => write!(f, "{}", "!="),
+            BinaryOp::Less => write!(f, "{}", "<"),
+            BinaryOp::LessEqual => write!(f, "{}", "<="),
+            BinaryOp::Greater => write!(f, "{}", ">"),
+            BinaryOp::GreaterEqual => write!(f, "{}", ">="),
+            BinaryOp::Plus => write!(f, "{}", "+"),
+            BinaryOp::Minus => write!(f, "{}", "-"),
+            BinaryOp::Star => write!(f, "{}", "*"),
+            BinaryOp::Slash => write!(f, "{}", "/"),
+        }
+    }
 }
 
 pub struct Binary {
