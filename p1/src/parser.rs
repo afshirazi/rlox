@@ -1,5 +1,6 @@
 use crate::{
     expr::{Binary, BinaryOp, Expr, Grouping, Literal, Unary, UnaryOp},
+    stmt::Stmt,
     tokens::{self, Token, TokenType},
     Lox,
 };
@@ -25,11 +26,32 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn parse(&mut self) -> Expr {
-        match self.expression() {
-            Some(expr) => expr,
-            None => todo!(), // TODO: for later chapter
+    pub fn parse(&mut self) -> Vec<Stmt> {
+        let mut stmts = vec![];
+        while !self.is_at_end() {
+            stmts.push(self.statement().unwrap());
         }
+        stmts
+    }
+
+    fn statement(&mut self) -> Option<Stmt> {
+        if self.adv_if_match(&[TokenType::Print]) {
+            self.print_statement()
+        } else {
+            self.expr_statement()
+        }
+    }
+    
+    fn print_statement(&mut self) -> Option<Stmt> {
+        let expr = self.expression()?;
+        self.try_consume(TokenType::Semicolon, "Expected semicolon after expression");
+        Some(Stmt::Print(expr))
+    }
+
+    fn expr_statement(&mut self) -> Option<Stmt> {
+        let expr = self.expression()?;
+        self.try_consume(TokenType::Semicolon, "Expected semicolon after expression");
+        Some(Stmt::Expr(expr))
     }
 
     fn expression(&mut self) -> Option<Expr> {
@@ -141,7 +163,13 @@ impl<'a> Parser<'a> {
             self.try_consume(TokenType::RightParen, "')' Expected after expression")?;
             Some(Expr::Grouping(Grouping::new(Box::new(expr))))
         } else {
-            (self.report)(self.lox, self.tokens[self.current as usize].line, 0, &self.tokens[self.current as usize].lexeme, "Unexpected character encountered");
+            (self.report)(
+                self.lox,
+                self.tokens[self.current as usize].line,
+                0,
+                &self.tokens[self.current as usize].lexeme,
+                "Unexpected character encountered",
+            );
             None
         }
     }
@@ -182,14 +210,14 @@ impl<'a> Parser<'a> {
         self.previous()
     }
 
-    fn try_consume(&mut self, token_type: TokenType, arg: &str) -> Option<&Token> {
+    fn try_consume(&mut self, token_type: TokenType, err_msg: &str) -> Option<&Token> {
         let peek = self.peek();
         let line = peek.line;
         let chars_in_line = peek.lexeme.clone(); // don't remember if this is actually the chars in line lol AND I DONT EFFIN CARE!!!!!!!!!
         if self.check(&token_type) {
             return Some(self.advance());
         } else {
-            (self.report)(self.lox, line, 0, &chars_in_line, arg);
+            (self.report)(self.lox, line, 0, &chars_in_line, err_msg);
             None
         }
     }
