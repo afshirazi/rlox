@@ -9,6 +9,7 @@ use scanner::Scanner;
 mod expr;
 mod parser;
 mod scanner;
+mod stmt;
 mod tokens;
 
 struct Lox {
@@ -52,17 +53,26 @@ impl Lox {
         let mut scanner = Scanner::new(source.to_owned(), self, &Self::report);
         scanner.scan_tokens();
         let tokens = scanner.tokens();
-        // scanner.tokens().iter().for_each(|token| println!("Token {:?}", token));
         let mut parser = Parser::new(tokens, self, &Self::report);
-        // let ast = parser.parse().print_ast();
-        // println!("{ast}");
 
-        let eval_ast = parser
+        parser
             .parse()
-            .interpret_ast()
-            .map(|literal| literal.to_string())
-            .unwrap_or_else(|err| err);
-        println!("Evaluated experession: {eval_ast}");
+            .into_iter()
+            .map(|stmt| stmt.interpret_stmt())
+            .fold(Ok(()), |acc, el| match (acc, el) {
+                (Err(s), Err(discard)) => {
+                    eprintln!("{discard}");
+                    Err(s)
+                }
+                (Ok(_), Err(disc)) => {
+                    eprintln!("{disc}");
+                    Err("Something went wrong, check error messages")
+                }
+                (Err(s), Ok(_)) => Err(s),
+                (Ok(_), Ok(_)) => Ok(()),
+            })
+            .err()
+            .map(|err| eprintln!("{err}"));
     }
 
     fn report(&mut self, line: u32, loc_in_line: u32, chars_in_line: &str, message: &str) {
