@@ -10,7 +10,7 @@ impl Stmt {
     pub fn interpret_stmt(self) -> Result<(), String> {
         match self {
             Stmt::Expr(expr) => {
-                Self::evaluate(expr);
+                Self::evaluate(expr)?;
                 Ok(())
             },
             Stmt::Print(expr) => {
