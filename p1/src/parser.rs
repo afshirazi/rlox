@@ -29,7 +29,7 @@ impl<'a> Parser<'a> {
     pub fn parse(&mut self) -> Vec<Stmt> {
         let mut stmts = vec![];
         while !self.is_at_end() {
-            if let Some(stmt) = self.statement() {
+            if let Some(stmt) = self.declaration() {
                 stmts.push(stmt);
             } else {
                 self.synchronize();
