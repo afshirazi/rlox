@@ -1,6 +1,6 @@
 use crate::{
     expr::{Binary, BinaryOp, Expr, Grouping, Literal, Unary, UnaryOp},
-    stmt::Stmt,
+    stmt::{Stmt, Var},
     tokens::{self, Token, TokenType},
     Lox,
 };
@@ -29,9 +29,30 @@ impl<'a> Parser<'a> {
     pub fn parse(&mut self) -> Vec<Stmt> {
         let mut stmts = vec![];
         while !self.is_at_end() {
-            stmts.push(self.statement().unwrap());
+            if let Some(stmt) = self.statement() {
+                stmts.push(stmt);
+            } else {
+                self.synchronize();
+            }
         }
         stmts
+    }
+
+    fn declaration(&mut self) -> Option<Stmt> {
+        if self.adv_if_match(&[TokenType::Var]) {
+            self.var_declaration()
+        } else {
+            self.statement()
+        }
+    }
+
+    fn var_declaration(&mut self) -> Option<Stmt> {
+        let name = self.try_consume(TokenType::Identifier, "Expect variable name")?.clone();
+
+        let initializer = self.adv_if_match(&[TokenType::Equal]).then_some(self.expression()).flatten()?;
+
+        self.try_consume(TokenType::Semicolon, "Expect ';' after variable declaration")?;
+        Some(Stmt::Var(Var::new(name, initializer)))
     }
 
     fn statement(&mut self) -> Option<Stmt> {
@@ -41,7 +62,7 @@ impl<'a> Parser<'a> {
             self.expr_statement()
         }
     }
-    
+
     fn print_statement(&mut self) -> Option<Stmt> {
         let expr = self.expression()?;
         self.try_consume(TokenType::Semicolon, "Expected semicolon after expression");
@@ -162,6 +183,8 @@ impl<'a> Parser<'a> {
             let expr = self.expression()?;
             self.try_consume(TokenType::RightParen, "')' Expected after expression")?;
             Some(Expr::Grouping(Grouping::new(Box::new(expr))))
+        } else if self.adv_if_match(&[TokenType::Identifier]) {
+            Some(Expr::Identifier(self.previous().clone()))
         } else {
             (self.report)(
                 self.lox,
@@ -171,6 +194,29 @@ impl<'a> Parser<'a> {
                 "Unexpected character encountered",
             );
             None
+        }
+    }
+
+    fn synchronize(&mut self) {
+        self.advance();
+        while !self.is_at_end() {
+            if self.previous().token_type == TokenType::Semicolon {
+                return;
+            }
+
+            match self.peek().token_type {
+                TokenType::Class
+                | TokenType::Fun
+                | TokenType::For
+                | TokenType::If
+                | TokenType::Print
+                | TokenType::Return
+                | TokenType::Var
+                | TokenType::While => return,
+                _ => (),
+            }
+
+            self.advance();
         }
     }
 
