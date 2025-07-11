@@ -11,7 +11,6 @@ pub struct Parser<'a> {
     tokens: Vec<Token>,
     current: u32,
     lox: &'a mut Lox,
-    report: &'a dyn Fn(&mut Lox, u32, u32, &str, &str), // this still feels stupid
     environment_map: Rc<HashMap<String, Literal>>
 }
 
@@ -19,13 +18,11 @@ impl<'a> Parser<'a> {
     pub fn new(
         tokens: Vec<Token>,
         lox: &'a mut Lox,
-        report: &'a dyn Fn(&mut Lox, u32, u32, &str, &str),
     ) -> Self {
         Self {
             tokens,
             current: 0,
             lox,
-            report,
             environment_map: Rc::new(HashMap::new()),
         }
     }
@@ -188,10 +185,9 @@ impl<'a> Parser<'a> {
             self.try_consume(TokenType::RightParen, "')' Expected after expression")?;
             Some(Expr::Grouping(Grouping::new(Box::new(expr))))
         } else if self.adv_if_match(&[TokenType::Identifier]) {
-            Some(Expr::Identifier(self.previous().clone(), self.environment_map.clone()))
+            Some(Expr::Identifier(self.previous().clone(), self.environment_map.clone())) //TODO: replace call to previous().clone() with reference maybe?
         } else {
-            (self.report)(
-                self.lox,
+            self.lox.report(
                 self.tokens[self.current as usize].line,
                 0,
                 &self.tokens[self.current as usize].lexeme,
@@ -267,7 +263,7 @@ impl<'a> Parser<'a> {
         if self.check(&token_type) {
             return Some(self.advance());
         } else {
-            (self.report)(self.lox, line, 0, &chars_in_line, err_msg);
+            self.lox.report(line, 0, &chars_in_line, err_msg);
             None
         }
     }

@@ -15,15 +15,10 @@ pub struct Scanner<'a> {
     current: u32,
     line: u32,
     lox: &'a mut Lox,
-    report: &'a dyn Fn(&mut Lox, u32, u32, &str, &str), // this feels stupid
 }
 
 impl<'a> Scanner<'a> {
-    pub fn new(
-        source: String,
-        lox: &'a mut Lox,
-        report_fn: &'a dyn Fn(&mut Lox, u32, u32, &str, &str),
-    ) -> Self {
+    pub fn new(source: String, lox: &'a mut Lox) -> Self {
         Self {
             source,
             tokens: vec![],
@@ -31,7 +26,6 @@ impl<'a> Scanner<'a> {
             current: 0,
             line: 0,
             lox,
-            report: report_fn,
         }
     }
 
@@ -123,8 +117,7 @@ impl<'a> Scanner<'a> {
                 } else if c.is_ascii_alphabetic() {
                     self.identifier();
                 } else {
-                    (self.report)(
-                        self.lox,
+                    self.lox.report(
                         self.line,
                         self.start,
                         &self.source[self.start as usize..self.current as usize],
@@ -173,8 +166,7 @@ impl<'a> Scanner<'a> {
         }
 
         if self.is_at_end() {
-            (self.report)(
-                self.lox,
+            self.lox.report(
                 self.line,
                 self.start,
                 &self.source[self.start as usize..self.current as usize],
@@ -203,8 +195,7 @@ impl<'a> Scanner<'a> {
         let num = match self.source[self.start as usize..self.current as usize].parse::<f64>() {
             Ok(num) => num,
             Err(_) => {
-                (self.report)(
-                    self.lox,
+                self.lox.report(
                     self.line,
                     self.start,
                     &self.source[self.start as usize..self.current as usize],

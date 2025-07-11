@@ -50,10 +50,10 @@ impl Lox {
     }
 
     fn run(&mut self, source: &str) {
-        let mut scanner = Scanner::new(source.to_owned(), self, &Self::report);
+        let mut scanner = Scanner::new(source.to_owned(), self);
         scanner.scan_tokens();
         let tokens = scanner.tokens();
-        let mut parser = Parser::new(tokens, self, &Self::report);
+        let mut parser = Parser::new(tokens, self);
 
         parser
             .parse()
