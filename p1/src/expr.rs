@@ -7,7 +7,7 @@ pub enum Expr {
     Unary(Unary),
     Binary(Binary),
     Grouping(Grouping),
-    Identifier(Token, Rc<HashMap<String, Expr>>),
+    Identifier(Token, Rc<HashMap<String, Literal>>),
 }
 
 impl Expr {
@@ -76,7 +76,7 @@ impl Expr {
                 ),
             },
             Expr::Grouping(grouping) => format!("(group {})", grouping.expr.print_ast()),
-            Expr::Identifier(token, map) => match token.token_type {
+            Expr::Identifier(token, _) => match token.token_type {
                 tokens::TokenType::Identifier => match token.literal.as_ref().unwrap() {
                     tokens::Literal::Identifier(i) => format!("({})", i),
                     _ => "not allowed".to_owned(),
@@ -149,7 +149,10 @@ impl Expr {
             Expr::Grouping(grouping) => Ok(grouping.expr.interpret_ast()?),
             Expr::Identifier(token, map) => match token.token_type {
                 tokens::TokenType::Identifier => match token.literal.as_ref().unwrap() {
-                    tokens::Literal::Identifier(i) => todo!("lookup variable in token map?"),
+                    tokens::Literal::Identifier(i) => map
+                        .get(i)
+                        .map(|lit| lit.clone())
+                        .ok_or("Couldn't find the variable".to_owned()),
                     _ => unreachable!("shouldn't ever be a number/string"),
                 },
                 ttype => Err(format!(
@@ -161,7 +164,7 @@ impl Expr {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Literal {
     Number(f64),
     String(String),

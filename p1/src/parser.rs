@@ -12,7 +12,7 @@ pub struct Parser<'a> {
     current: u32,
     lox: &'a mut Lox,
     report: &'a dyn Fn(&mut Lox, u32, u32, &str, &str), // this still feels stupid
-    environment_map: Rc<HashMap<String, Expr>>
+    environment_map: Rc<HashMap<String, Literal>>
 }
 
 impl<'a> Parser<'a> {
