@@ -1,3 +1,5 @@
+use std::{collections::HashMap, rc::Rc};
+
 use crate::{
     expr::{Binary, BinaryOp, Expr, Grouping, Literal, Unary, UnaryOp},
     stmt::{Stmt, Var},
@@ -10,6 +12,7 @@ pub struct Parser<'a> {
     current: u32,
     lox: &'a mut Lox,
     report: &'a dyn Fn(&mut Lox, u32, u32, &str, &str), // this still feels stupid
+    environment_map: Rc<HashMap<String, Expr>>
 }
 
 impl<'a> Parser<'a> {
@@ -23,6 +26,7 @@ impl<'a> Parser<'a> {
             current: 0,
             lox,
             report,
+            environment_map: Rc::new(HashMap::new()),
         }
     }
 
@@ -184,7 +188,7 @@ impl<'a> Parser<'a> {
             self.try_consume(TokenType::RightParen, "')' Expected after expression")?;
             Some(Expr::Grouping(Grouping::new(Box::new(expr))))
         } else if self.adv_if_match(&[TokenType::Identifier]) {
-            Some(Expr::Identifier(self.previous().clone()))
+            Some(Expr::Identifier(self.previous().clone(), self.environment_map.clone()))
         } else {
             (self.report)(
                 self.lox,

@@ -1,4 +1,4 @@
-use std::fmt::{self, format};
+use std::{collections::HashMap, fmt, rc::Rc};
 
 use crate::tokens::{self, Token};
 
@@ -7,7 +7,7 @@ pub enum Expr {
     Unary(Unary),
     Binary(Binary),
     Grouping(Grouping),
-    Identifier(Token),
+    Identifier(Token, Rc<HashMap<String, Expr>>),
 }
 
 impl Expr {
@@ -76,7 +76,7 @@ impl Expr {
                 ),
             },
             Expr::Grouping(grouping) => format!("(group {})", grouping.expr.print_ast()),
-            Expr::Identifier(token) => match token.token_type {
+            Expr::Identifier(token, map) => match token.token_type {
                 tokens::TokenType::Identifier => match token.literal.as_ref().unwrap() {
                     tokens::Literal::Identifier(i) => format!("({})", i),
                     _ => "not allowed".to_owned(),
@@ -147,12 +147,15 @@ impl Expr {
                 }
             }
             Expr::Grouping(grouping) => Ok(grouping.expr.interpret_ast()?),
-            Expr::Identifier(token) => match token.token_type {
+            Expr::Identifier(token, map) => match token.token_type {
                 tokens::TokenType::Identifier => match token.literal.as_ref().unwrap() {
                     tokens::Literal::Identifier(i) => todo!("lookup variable in token map?"),
-                    _ => unreachable!("shouldn't ever be a number/string")
+                    _ => unreachable!("shouldn't ever be a number/string"),
                 },
-                ttype => Err(format!("Somehow this Identifier was of type {:?} instead", ttype))
+                ttype => Err(format!(
+                    "Somehow this Identifier was of type {:?} instead",
+                    ttype
+                )),
             },
         }
     }
