@@ -26,9 +26,11 @@ impl Stmt {
             }
             Stmt::Var(var, env) => {
                 match var.initializer {
-                    Some(val) => env
-                        .borrow_mut() // TODO: change to normal mut reference, I don't think we need to check dynamically
-                        .define(var.token.lexeme, val.interpret_ast()?),
+                    Some(expr) => {
+                        let val = expr.interpret_ast()?;
+                        env.borrow_mut() // TODO: change to normal mut reference, I don't think we need to check dynamically
+                            .define(var.token.lexeme, val)
+                    }
                     None => env.borrow_mut().define(var.token.lexeme, Literal::Nil),
                 };
                 Ok(())
