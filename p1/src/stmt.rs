@@ -1,4 +1,7 @@
+use std::{cell::RefCell, rc::Rc};
+
 use crate::{
+    environment::Environment,
     expr::{Expr, Literal},
     tokens::Token,
 };
@@ -6,41 +9,51 @@ use crate::{
 pub enum Stmt {
     Expr(Expr),
     Print(Expr),
-    Var(Var),
+    Var(Var, Rc<RefCell<Environment>>),
 }
 
 impl Stmt {
     pub fn interpret_stmt(self) -> Result<(), String> {
         match self {
             Stmt::Expr(expr) => {
-                Self::evaluate(expr)?;
+                expr.interpret_ast()?;
                 Ok(())
             }
             Stmt::Print(expr) => {
-                let value = Self::evaluate(expr)?;
+                let value = expr.interpret_ast()?;
                 println!("{}", value);
                 Ok(())
             }
-            Stmt::Var(var) => {
-                Self::evaluate(var.initializer)?;
+            Stmt::Var(var, env) => {
+                match var.initializer {
+                    Some(val) => env
+                        .borrow_mut() // TODO: change to normal mut reference, I don't think we need to check dynamically
+                        .define(var.token.lexeme, val.interpret_ast()?),
+                    None => env.borrow_mut().define(var.token.lexeme, Literal::Nil),
+                };
                 Ok(())
             }
         }
-    }
-
-    fn evaluate(expr: Expr) -> Result<Literal, String> {
-        expr.interpret_ast()
     }
 }
 
 pub struct Var {
     token: Token,
-    initializer: Expr,
+    initializer: Option<Expr>,
 }
 
 impl Var {
-    pub fn new(token: Token, initializer: Expr) -> Self {
-        Self { token, initializer }
+    pub fn new(token: Token) -> Self {
+        Self {
+            token,
+            initializer: None,
+        }
+    }
+
+    pub fn with_init(token: Token, initializer: Expr) -> Self {
+        Self {
+            token,
+            initializer: Some(initializer),
+        }
     }
 }
-

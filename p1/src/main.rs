@@ -6,6 +6,7 @@ use std::{
 use parser::Parser;
 use scanner::Scanner;
 
+mod environment;
 mod expr;
 mod parser;
 mod scanner;

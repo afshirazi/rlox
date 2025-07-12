@@ -1,6 +1,7 @@
-use std::{collections::HashMap, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::{
+    environment::Environment,
     expr::{Binary, BinaryOp, Expr, Grouping, Literal, Unary, UnaryOp},
     stmt::{Stmt, Var},
     tokens::{self, Token, TokenType},
@@ -11,19 +12,16 @@ pub struct Parser<'a> {
     tokens: Vec<Token>,
     current: u32,
     lox: &'a mut Lox,
-    environment_map: Rc<HashMap<String, Literal>>
+    environment: Rc<RefCell<Environment>>,
 }
 
 impl<'a> Parser<'a> {
-    pub fn new(
-        tokens: Vec<Token>,
-        lox: &'a mut Lox,
-    ) -> Self {
+    pub fn new(tokens: Vec<Token>, lox: &'a mut Lox) -> Self {
         Self {
             tokens,
             current: 0,
             lox,
-            environment_map: Rc::new(HashMap::new()),
+            environment: Rc::new(RefCell::new(Environment::new())),
         }
     }
 
@@ -48,12 +46,23 @@ impl<'a> Parser<'a> {
     }
 
     fn var_declaration(&mut self) -> Option<Stmt> {
-        let name = self.try_consume(TokenType::Identifier, "Expect variable name")?.clone();
+        let name = self
+            .try_consume(TokenType::Identifier, "Expect variable name")?
+            .clone();
 
-        let initializer = self.adv_if_match(&[TokenType::Equal]).then_some(self.expression()).flatten()?;
+        let initializer = self
+            .adv_if_match(&[TokenType::Equal])
+            .then_some(self.expression())
+            .flatten()?;
 
-        self.try_consume(TokenType::Semicolon, "Expect ';' after variable declaration")?;
-        Some(Stmt::Var(Var::new(name, initializer)))
+        self.try_consume(
+            TokenType::Semicolon,
+            "Expect ';' after variable declaration",
+        )?;
+        Some(Stmt::Var(
+            Var::with_init(name, initializer),
+            self.environment.clone(),
+        ))
     }
 
     fn statement(&mut self) -> Option<Stmt> {
@@ -185,7 +194,10 @@ impl<'a> Parser<'a> {
             self.try_consume(TokenType::RightParen, "')' Expected after expression")?;
             Some(Expr::Grouping(Grouping::new(Box::new(expr))))
         } else if self.adv_if_match(&[TokenType::Identifier]) {
-            Some(Expr::Identifier(self.previous().clone(), self.environment_map.clone())) //TODO: replace call to previous().clone() with reference maybe?
+            Some(Expr::Identifier(
+                self.previous().clone(),
+                self.environment.clone(),
+            )) //TODO: replace call to previous().clone() with reference maybe?
         } else {
             self.lox.report(
                 self.tokens[self.current as usize].line,

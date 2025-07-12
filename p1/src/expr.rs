@@ -1,13 +1,16 @@
-use std::{collections::HashMap, fmt, rc::Rc};
+use std::{cell::RefCell, fmt, rc::Rc};
 
-use crate::tokens::{self, Token};
+use crate::{
+    environment::Environment,
+    tokens::{self, Token},
+};
 
 pub enum Expr {
     Literal(Literal),
     Unary(Unary),
     Binary(Binary),
     Grouping(Grouping),
-    Identifier(Token, Rc<HashMap<String, Literal>>),
+    Identifier(Token, Rc<RefCell<Environment>>),
 }
 
 impl Expr {
@@ -150,6 +153,7 @@ impl Expr {
             Expr::Identifier(token, map) => match token.token_type {
                 tokens::TokenType::Identifier => match token.literal.as_ref().unwrap() {
                     tokens::Literal::Identifier(i) => map
+                        .borrow() // TODO: change to normal reference
                         .get(i)
                         .map(|lit| lit.clone())
                         .ok_or("Couldn't find the variable".to_owned()),
