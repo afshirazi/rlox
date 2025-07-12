@@ -53,16 +53,19 @@ impl<'a> Parser<'a> {
         let initializer = self
             .adv_if_match(&[TokenType::Equal])
             .then_some(self.expression())
-            .flatten()?;
+            .flatten();
 
         self.try_consume(
             TokenType::Semicolon,
             "Expect ';' after variable declaration",
         )?;
-        Some(Stmt::Var(
-            Var::with_init(name, initializer),
-            self.environment.clone(),
-        ))
+        match initializer {
+            Some(val) => Some(Stmt::Var(
+                Var::with_init(name, val),
+                self.environment.clone(),
+            )),
+            None => Some(Stmt::Var(Var::new(name), self.environment.clone())),
+        }
     }
 
     fn statement(&mut self) -> Option<Stmt> {
