@@ -17,6 +17,13 @@ struct Lox {
     has_error: bool,
 }
 
+struct LoxError {
+    line: u32,
+    loc_in_line: u32,
+    chars_in_line: String,
+    message: String,
+}
+
 impl Lox {
     fn init(args: Vec<String>) {
         let mut lox = Lox { has_error: false };
@@ -30,11 +37,13 @@ impl Lox {
 
     fn run_file(&mut self, file_name: &str) {
         let file = fs::read_to_string(file_name).unwrap();
-        self.run(&file);
+        let mut parser = Parser::new();
+        self.run(&file, &mut parser);
     }
 
     fn run_prompt(&mut self) {
         let mut input = String::new();
+        let mut parser = Parser::new();
         loop {
             if self.has_error {
                 self.has_error = false;
@@ -46,20 +55,26 @@ impl Lox {
                 return;
             }
 
-            self.run(&input);
+            self.run(&input, &mut parser);
         }
     }
 
-    fn run(&mut self, source: &str) {
+    fn run(&mut self, source: &str, parser: &mut Parser) {
         let mut scanner = Scanner::new(source.to_owned(), self);
         scanner.scan_tokens();
-        let tokens = scanner.tokens(); // TODO: move scanner and parser out of run to maintain Environment state in REPL
-        let mut parser = Parser::new(tokens, self);
+        let tokens = scanner.tokens();
+        parser.reset_tokens(tokens);
 
         parser
             .parse()
             .into_iter()
-            .map(|stmt| stmt.interpret_stmt())
+            .filter_map(|stmt| match stmt {
+                Ok(s) => Some(s.interpret_stmt()),
+                Err(err) => {
+                    self.report(err.line, err.loc_in_line, &err.chars_in_line, &err.message);
+                    None
+                }
+            })
             .fold(Ok(()), |acc, el| match (acc, el) {
                 (Err(s), Err(discard)) => {
                     eprintln!("{discard}");
@@ -80,6 +95,17 @@ impl Lox {
         //TODO: make better
         eprintln!("[Line {line}:{loc_in_line}] Error at {chars_in_line}: {message}.");
         self.has_error = true;
+    }
+}
+
+impl LoxError {
+    fn new(line: u32, loc_in_line: u32, chars_in_line: String, message: String) -> Self {
+        Self {
+            line,
+            loc_in_line,
+            chars_in_line,
+            message,
+        }
     }
 }
 

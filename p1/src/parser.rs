@@ -5,39 +5,44 @@ use crate::{
     expr::{Binary, BinaryOp, Expr, Grouping, Literal, Unary, UnaryOp},
     stmt::{Stmt, Var},
     tokens::{self, Token, TokenType},
-    Lox,
+    LoxError,
 };
 
-pub struct Parser<'a> {
+pub struct Parser {
     tokens: Vec<Token>,
     current: u32,
-    lox: &'a mut Lox,
     environment: Rc<RefCell<Environment>>,
 }
 
-impl<'a> Parser<'a> {
-    pub fn new(tokens: Vec<Token>, lox: &'a mut Lox) -> Self {
+impl Parser {
+    pub fn new() -> Self {
         Self {
-            tokens,
+            tokens: vec![],
             current: 0,
-            lox,
             environment: Rc::new(RefCell::new(Environment::new())),
         }
     }
 
-    pub fn parse(&mut self) -> Vec<Stmt> {
+    pub fn reset_tokens(&mut self, tokens: Vec<Token>) {
+        self.tokens = tokens;
+        self.current = 0;
+    }
+
+    pub fn parse(&mut self) -> Vec<Result<Stmt, LoxError>> {
         let mut stmts = vec![];
         while !self.is_at_end() {
-            if let Some(stmt) = self.declaration() {
-                stmts.push(stmt);
-            } else {
-                self.synchronize();
+            match self.declaration() {
+                Ok(stmt) => stmts.push(Ok(stmt)),
+                Err(e) => {
+                    stmts.push(Err(e));
+                    self.synchronize();
+                }
             }
         }
         stmts
     }
 
-    fn declaration(&mut self) -> Option<Stmt> {
+    fn declaration(&mut self) -> Result<Stmt, LoxError> {
         if self.adv_if_match(&[TokenType::Var]) {
             self.var_declaration()
         } else {
@@ -45,30 +50,29 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn var_declaration(&mut self) -> Option<Stmt> {
+    fn var_declaration(&mut self) -> Result<Stmt, LoxError> {
         let name = self
             .try_consume(TokenType::Identifier, "Expect variable name")?
             .clone();
 
         let initializer = self
             .adv_if_match(&[TokenType::Equal])
-            .then_some(self.expression())
-            .flatten();
+            .then_some(self.expression()?);
 
         self.try_consume(
             TokenType::Semicolon,
             "Expect ';' after variable declaration",
         )?;
         match initializer {
-            Some(val) => Some(Stmt::Var(
+            Some(val) => Ok(Stmt::Var(
                 Var::with_init(name, val),
                 self.environment.clone(),
             )),
-            None => Some(Stmt::Var(Var::new(name), self.environment.clone())),
+            None => Ok(Stmt::Var(Var::new(name), self.environment.clone())),
         }
     }
 
-    fn statement(&mut self) -> Option<Stmt> {
+    fn statement(&mut self) -> Result<Stmt, LoxError> {
         if self.adv_if_match(&[TokenType::Print]) {
             self.print_statement()
         } else {
@@ -76,24 +80,24 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn print_statement(&mut self) -> Option<Stmt> {
+    fn print_statement(&mut self) -> Result<Stmt, LoxError> {
         let expr = self.expression()?;
-        self.try_consume(TokenType::Semicolon, "Expected semicolon after expression");
-        Some(Stmt::Print(expr))
+        self.try_consume(TokenType::Semicolon, "Expected semicolon after expression")?;
+        Ok(Stmt::Print(expr))
     }
 
-    fn expr_statement(&mut self) -> Option<Stmt> {
+    fn expr_statement(&mut self) -> Result<Stmt, LoxError> {
         let expr = self.expression()?;
-        self.try_consume(TokenType::Semicolon, "Expected semicolon after expression");
-        Some(Stmt::Expr(expr))
+        self.try_consume(TokenType::Semicolon, "Expected semicolon after expression")?;
+        Ok(Stmt::Expr(expr))
     }
 
-    fn expression(&mut self) -> Option<Expr> {
-        Some(self.equality()?)
+    fn expression(&mut self) -> Result<Expr, LoxError> {
+        self.equality()
     }
 
     // comparison ( (== | !=) comparison ) *
-    fn equality(&mut self) -> Option<Expr> {
+    fn equality(&mut self) -> Result<Expr, LoxError> {
         let mut expr = self.comparison()?;
         while self.adv_if_match(&[TokenType::EqualEqual, TokenType::BangEqual]) {
             let op = match self.previous().token_type {
@@ -105,10 +109,10 @@ impl<'a> Parser<'a> {
             expr = Expr::Binary(Binary::new(Box::new(expr), op, Box::new(right)));
         }
 
-        Some(expr)
+        Ok(expr)
     }
 
-    fn comparison(&mut self) -> Option<Expr> {
+    fn comparison(&mut self) -> Result<Expr, LoxError> {
         let mut expr = self.term()?;
 
         while self.adv_if_match(&[
@@ -128,10 +132,10 @@ impl<'a> Parser<'a> {
             expr = Expr::Binary(Binary::new(Box::new(expr), op, Box::new(right)));
         }
 
-        Some(expr)
+        Ok(expr)
     }
 
-    fn term(&mut self) -> Option<Expr> {
+    fn term(&mut self) -> Result<Expr, LoxError> {
         let mut expr = self.factor()?;
 
         while self.adv_if_match(&[TokenType::Minus, TokenType::Plus]) {
@@ -144,10 +148,10 @@ impl<'a> Parser<'a> {
             expr = Expr::Binary(Binary::new(Box::new(expr), op, Box::new(right)));
         }
 
-        Some(expr)
+        Ok(expr)
     }
 
-    fn factor(&mut self) -> Option<Expr> {
+    fn factor(&mut self) -> Result<Expr, LoxError> {
         let mut expr = self.unary()?;
 
         while self.adv_if_match(&[TokenType::Slash, TokenType::Star]) {
@@ -160,10 +164,10 @@ impl<'a> Parser<'a> {
             expr = Expr::Binary(Binary::new(Box::new(expr), op, Box::new(right)));
         }
 
-        Some(expr)
+        Ok(expr)
     }
 
-    fn unary(&mut self) -> Option<Expr> {
+    fn unary(&mut self) -> Result<Expr, LoxError> {
         match self.adv_if_match(&[TokenType::Minus, TokenType::Bang]) {
             true => {
                 let op = match self.previous().token_type {
@@ -172,43 +176,42 @@ impl<'a> Parser<'a> {
                     _ => unreachable!(),
                 };
                 let expr = self.unary()?;
-                Some(Expr::Unary(Unary::new(op, Box::new(expr))))
+                Ok(Expr::Unary(Unary::new(op, Box::new(expr))))
             }
-            false => Some(self.primary()?),
+            false => self.primary(),
         }
     }
 
-    fn primary(&mut self) -> Option<Expr> {
+    fn primary(&mut self) -> Result<Expr, LoxError> {
         if self.adv_if_match(&[TokenType::False]) {
-            Some(Expr::Literal(Literal::Boolean(false)))
+            Ok(Expr::Literal(Literal::Boolean(false)))
         } else if self.adv_if_match(&[TokenType::True]) {
-            Some(Expr::Literal(Literal::Boolean(true)))
+            Ok(Expr::Literal(Literal::Boolean(true)))
         } else if self.adv_if_match(&[TokenType::Nil]) {
-            Some(Expr::Literal(Literal::Nil))
+            Ok(Expr::Literal(Literal::Nil))
         } else if self.adv_if_match(&[TokenType::Number, TokenType::String]) {
             let lit = match self.previous().literal.as_ref().unwrap() {
                 tokens::Literal::Number(n) => Literal::Number(*n),
                 tokens::Literal::String(s) => Literal::String(s.clone()),
                 _ => unreachable!(),
             };
-            Some(Expr::Literal(lit))
+            Ok(Expr::Literal(lit))
         } else if self.adv_if_match(&[TokenType::LeftParen]) {
             let expr = self.expression()?;
             self.try_consume(TokenType::RightParen, "')' Expected after expression")?;
-            Some(Expr::Grouping(Grouping::new(Box::new(expr))))
+            Ok(Expr::Grouping(Grouping::new(Box::new(expr))))
         } else if self.adv_if_match(&[TokenType::Identifier]) {
-            Some(Expr::Identifier(
+            Ok(Expr::Identifier(
                 self.previous().clone(),
                 self.environment.clone(),
             )) //TODO: replace call to previous().clone() with reference maybe?
         } else {
-            self.lox.report(
+            Err(LoxError::new(
                 self.tokens[self.current as usize].line,
                 0,
-                &self.tokens[self.current as usize].lexeme,
-                "Unexpected character encountered",
-            );
-            None
+                self.tokens[self.current as usize].lexeme.clone(),
+                "Unexpected character encountered".to_owned(),
+            ))
         }
     }
 
@@ -271,15 +274,14 @@ impl<'a> Parser<'a> {
         self.previous()
     }
 
-    fn try_consume(&mut self, token_type: TokenType, err_msg: &str) -> Option<&Token> {
+    fn try_consume(&mut self, token_type: TokenType, err_msg: &str) -> Result<&Token, LoxError> {
         let peek = self.peek();
         let line = peek.line;
         let chars_in_line = peek.lexeme.clone(); // don't remember if this is actually the chars in line lol AND I DONT EFFIN CARE!!!!!!!!!
         if self.check(&token_type) {
-            return Some(self.advance());
+            return Ok(self.advance());
         } else {
-            self.lox.report(line, 0, &chars_in_line, err_msg);
-            None
+            Err(LoxError::new(line, 0, chars_in_line, err_msg.to_owned()))
         }
     }
 }

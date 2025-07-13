@@ -14,80 +14,80 @@ pub enum Expr {
 }
 
 impl Expr {
-    pub fn print_ast(&self) -> String {
-        match self {
-            Expr::Literal(literal) => match literal {
-                Literal::Number(n) => n.to_string(),
-                Literal::String(s) => s.clone(),
-                Literal::Boolean(b) => b.to_string(),
-                Literal::Nil => "nil".to_owned(),
-            },
-            Expr::Unary(unary) => match unary.op {
-                UnaryOp::Minus => format!("(- {})", unary.expr.print_ast()),
-                UnaryOp::Bang => format!("(! {})", unary.expr.print_ast()),
-            },
-            Expr::Binary(binary) => match binary.op {
-                BinaryOp::EqualEqual => format!(
-                    "(== {} {})",
-                    binary.l_expr.print_ast(),
-                    binary.r_expr.print_ast()
-                ),
-                BinaryOp::BangEqual => format!(
-                    "(!= {} {})",
-                    binary.l_expr.print_ast(),
-                    binary.r_expr.print_ast()
-                ),
-                BinaryOp::Less => format!(
-                    "(< {} {})",
-                    binary.l_expr.print_ast(),
-                    binary.r_expr.print_ast()
-                ),
-                BinaryOp::LessEqual => format!(
-                    "(<= {} {})",
-                    binary.l_expr.print_ast(),
-                    binary.r_expr.print_ast()
-                ),
-                BinaryOp::Greater => format!(
-                    "(> {} {})",
-                    binary.l_expr.print_ast(),
-                    binary.r_expr.print_ast()
-                ),
-                BinaryOp::GreaterEqual => format!(
-                    "(>= {} {})",
-                    binary.l_expr.print_ast(),
-                    binary.r_expr.print_ast()
-                ),
-                BinaryOp::Plus => format!(
-                    "(+ {} {})",
-                    binary.l_expr.print_ast(),
-                    binary.r_expr.print_ast()
-                ),
-                BinaryOp::Minus => format!(
-                    "(- {} {})",
-                    binary.l_expr.print_ast(),
-                    binary.r_expr.print_ast()
-                ),
-                BinaryOp::Star => format!(
-                    "(* {} {})",
-                    binary.l_expr.print_ast(),
-                    binary.r_expr.print_ast()
-                ),
-                BinaryOp::Slash => format!(
-                    "(/ {} {})",
-                    binary.l_expr.print_ast(),
-                    binary.r_expr.print_ast()
-                ),
-            },
-            Expr::Grouping(grouping) => format!("(group {})", grouping.expr.print_ast()),
-            Expr::Identifier(token, _) => match token.token_type {
-                tokens::TokenType::Identifier => match token.literal.as_ref().unwrap() {
-                    tokens::Literal::Identifier(i) => format!("({})", i),
-                    _ => "not allowed".to_owned(),
-                },
-                _ => "not allowed".to_owned(),
-            },
-        }
-    }
+    // pub fn print_ast(&self) -> String {
+    //     match self {
+    //         Expr::Literal(literal) => match literal {
+    //             Literal::Number(n) => n.to_string(),
+    //             Literal::String(s) => s.clone(),
+    //             Literal::Boolean(b) => b.to_string(),
+    //             Literal::Nil => "nil".to_owned(),
+    //         },
+    //         Expr::Unary(unary) => match unary.op {
+    //             UnaryOp::Minus => format!("(- {})", unary.expr.print_ast()),
+    //             UnaryOp::Bang => format!("(! {})", unary.expr.print_ast()),
+    //         },
+    //         Expr::Binary(binary) => match binary.op {
+    //             BinaryOp::EqualEqual => format!(
+    //                 "(== {} {})",
+    //                 binary.l_expr.print_ast(),
+    //                 binary.r_expr.print_ast()
+    //             ),
+    //             BinaryOp::BangEqual => format!(
+    //                 "(!= {} {})",
+    //                 binary.l_expr.print_ast(),
+    //                 binary.r_expr.print_ast()
+    //             ),
+    //             BinaryOp::Less => format!(
+    //                 "(< {} {})",
+    //                 binary.l_expr.print_ast(),
+    //                 binary.r_expr.print_ast()
+    //             ),
+    //             BinaryOp::LessEqual => format!(
+    //                 "(<= {} {})",
+    //                 binary.l_expr.print_ast(),
+    //                 binary.r_expr.print_ast()
+    //             ),
+    //             BinaryOp::Greater => format!(
+    //                 "(> {} {})",
+    //                 binary.l_expr.print_ast(),
+    //                 binary.r_expr.print_ast()
+    //             ),
+    //             BinaryOp::GreaterEqual => format!(
+    //                 "(>= {} {})",
+    //                 binary.l_expr.print_ast(),
+    //                 binary.r_expr.print_ast()
+    //             ),
+    //             BinaryOp::Plus => format!(
+    //                 "(+ {} {})",
+    //                 binary.l_expr.print_ast(),
+    //                 binary.r_expr.print_ast()
+    //             ),
+    //             BinaryOp::Minus => format!(
+    //                 "(- {} {})",
+    //                 binary.l_expr.print_ast(),
+    //                 binary.r_expr.print_ast()
+    //             ),
+    //             BinaryOp::Star => format!(
+    //                 "(* {} {})",
+    //                 binary.l_expr.print_ast(),
+    //                 binary.r_expr.print_ast()
+    //             ),
+    //             BinaryOp::Slash => format!(
+    //                 "(/ {} {})",
+    //                 binary.l_expr.print_ast(),
+    //                 binary.r_expr.print_ast()
+    //             ),
+    //         },
+    //         Expr::Grouping(grouping) => format!("(group {})", grouping.expr.print_ast()),
+    //         Expr::Identifier(token, _) => match token.token_type {
+    //             tokens::TokenType::Identifier => match token.literal.as_ref().unwrap() {
+    //                 tokens::Literal::Identifier(i) => format!("({})", i),
+    //                 _ => "not allowed".to_owned(),
+    //             },
+    //             _ => "not allowed".to_owned(),
+    //         },
+    //     }
+    // }
 
     pub fn interpret_ast(self) -> Result<Literal, String> {
         match self {
