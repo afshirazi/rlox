@@ -153,7 +153,7 @@ impl Expr {
             Expr::Identifier(token, map) => match token.token_type {
                 tokens::TokenType::Identifier => match token.literal.as_ref().unwrap() {
                     tokens::Literal::Identifier(i) => map
-                        .borrow() // TODO: change to normal reference
+                        .borrow()
                         .get(i)
                         .map(|lit| lit.clone())
                         .ok_or("Couldn't find the variable".to_owned()),

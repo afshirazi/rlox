@@ -28,7 +28,7 @@ impl Stmt {
                 match var.initializer {
                     Some(expr) => {
                         let val = expr.interpret_ast()?;
-                        env.borrow_mut() // TODO: change to normal mut reference, I don't think we need to check dynamically
+                        env.borrow_mut()
                             .define(var.token.lexeme, val)
                     }
                     None => env.borrow_mut().define(var.token.lexeme, Literal::Nil),
