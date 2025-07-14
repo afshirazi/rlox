@@ -1,6 +1,6 @@
 use std::{
     env, fs,
-    io::{self},
+    io::{self, stdout, Write},
 };
 
 use parser::Parser;
@@ -48,6 +48,8 @@ impl Lox {
             if self.has_error {
                 self.has_error = false;
             }
+            print!("> ");
+            let _ = stdout().flush();
 
             input.clear();
             io::stdin().read_line(&mut input).unwrap();
