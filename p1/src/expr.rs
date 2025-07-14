@@ -10,7 +10,8 @@ pub enum Expr {
     Unary(Unary),
     Binary(Binary),
     Grouping(Grouping),
-    Identifier(Token, Rc<RefCell<Environment>>),
+    Variable(Token, Rc<RefCell<Environment>>),
+    Assign(Assign),
 }
 
 impl Expr {
@@ -150,7 +151,7 @@ impl Expr {
                 }
             }
             Expr::Grouping(grouping) => Ok(grouping.expr.interpret_ast()?),
-            Expr::Identifier(token, map) => match token.token_type {
+            Expr::Variable(token, map) => match token.token_type {
                 tokens::TokenType::Identifier => match token.literal.as_ref().unwrap() {
                     tokens::Literal::Identifier(i) => map
                         .borrow()
@@ -164,6 +165,7 @@ impl Expr {
                     ttype
                 )),
             },
+            Expr::Assign(assign) => assign.expr.interpret_ast()
         }
     }
 }
@@ -253,5 +255,16 @@ pub struct Grouping {
 impl Grouping {
     pub fn new(expr: Box<Expr>) -> Self {
         Self { expr }
+    }
+}
+
+pub struct Assign {
+    name: Token,
+    expr: Box<Expr>,
+}
+
+impl Assign {
+    pub fn new(name: Token, expr: Box<Expr>) -> Self {
+        Self { name, expr }
     }
 }

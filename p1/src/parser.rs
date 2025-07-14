@@ -2,7 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use crate::{
     environment::Environment,
-    expr::{Binary, BinaryOp, Expr, Grouping, Literal, Unary, UnaryOp},
+    expr::{Assign, Binary, BinaryOp, Expr, Grouping, Literal, Unary, UnaryOp},
     stmt::{Stmt, Var},
     tokens::{self, Token, TokenType},
     LoxError,
@@ -93,7 +93,23 @@ impl Parser {
     }
 
     fn expression(&mut self) -> Result<Expr, LoxError> {
-        self.equality()
+        self.assignment()
+    }
+
+    fn assignment(&mut self) -> Result<Expr, LoxError> {
+        let mut expr = self.equality()?;
+
+        if self.adv_if_match(&[TokenType::Equal]) {
+            let eq = self.previous();
+            let value = self.assignment()?;
+
+            expr = match expr {
+                Expr::Variable(name, _) => Expr::Assign(Assign::new(name, Box::new(value))),
+                _ => return Err(LoxError::new(self.peek().line, self.current, "".to_owned(), "Invalid assignment target".to_owned())),
+            }
+        }
+
+        Ok(expr)
     }
 
     // comparison ( (== | !=) comparison ) *
@@ -201,7 +217,7 @@ impl Parser {
             self.try_consume(TokenType::RightParen, "')' Expected after expression")?;
             Ok(Expr::Grouping(Grouping::new(Box::new(expr))))
         } else if self.adv_if_match(&[TokenType::Identifier]) {
-            Ok(Expr::Identifier(
+            Ok(Expr::Variable(
                 self.previous().clone(),
                 self.environment.clone(),
             )) //TODO: replace call to previous().clone() with reference maybe?
