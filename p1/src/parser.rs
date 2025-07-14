@@ -57,7 +57,7 @@ impl Parser {
 
         let initializer = self
             .adv_if_match(&[TokenType::Equal])
-            .then_some(self.expression()?);
+            .then(|| self.expression());
 
         self.try_consume(
             TokenType::Semicolon,
@@ -65,7 +65,7 @@ impl Parser {
         )?;
         match initializer {
             Some(val) => Ok(Stmt::Var(
-                Var::with_init(name, val),
+                Var::with_init(name, val?),
                 self.environment.clone(),
             )),
             None => Ok(Stmt::Var(Var::new(name), self.environment.clone())),
