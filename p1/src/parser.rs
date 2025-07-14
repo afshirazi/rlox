@@ -100,7 +100,6 @@ impl Parser {
         let mut expr = self.equality()?;
 
         if self.adv_if_match(&[TokenType::Equal]) {
-            let eq = self.previous();
             let value = self.assignment()?;
 
             expr = match expr {
