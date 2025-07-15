@@ -20,4 +20,13 @@ impl Environment {
     pub fn define(&mut self, key: String, val: Literal) {
         self.map.insert(key, val);
     }
+
+    pub fn assign(&mut self, key: String, val: Literal) -> Result<(), String> {
+        if self.map.contains_key(&key) {
+            self.map.insert(key, val);
+            Ok(())
+        } else {
+            Err(format!("Undefined variable: {}", key))
+        }
+    }
 }

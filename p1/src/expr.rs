@@ -11,7 +11,7 @@ pub enum Expr {
     Binary(Binary),
     Grouping(Grouping),
     Variable(Token, Rc<RefCell<Environment>>),
-    Assign(Assign),
+    Assign(Assign, Rc<RefCell<Environment>>),
 }
 
 impl Expr {
@@ -165,7 +165,11 @@ impl Expr {
                     ttype
                 )),
             },
-            Expr::Assign(assign) => assign.expr.interpret_ast()
+            Expr::Assign(assign, map) => {
+                let val = assign.expr.interpret_ast()?;
+                map.borrow_mut().assign(assign.name.lexeme, val.clone())?;
+                Ok(val)
+            }
         }
     }
 }

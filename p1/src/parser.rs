@@ -103,7 +103,7 @@ impl Parser {
             let value = self.assignment()?;
 
             expr = match expr {
-                Expr::Variable(name, _) => Expr::Assign(Assign::new(name, Box::new(value))),
+                Expr::Variable(name, _) => Expr::Assign(Assign::new(name, Box::new(value)), self.environment.clone()),
                 _ => return Err(LoxError::new(self.peek().line, self.current, "".to_owned(), "Invalid assignment target".to_owned())),
             }
         }
