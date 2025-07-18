@@ -1,9 +1,9 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, rc::Rc};
 
 use crate::expr::Literal;
 
 pub struct Environment {
-    enclosing: Option<Box<Environment>>, // reference to parent environment, for scoping
+    enclosing: Option<Rc<Environment>>, // reference to parent environment, for scoping
     map: HashMap<String, Literal>,
 }
 
@@ -15,15 +15,22 @@ impl Environment {
         }
     }
 
-    pub fn with_enclosing(parent: Environment) -> Self {
+    pub fn with_enclosing(parent: Rc<Environment>) -> Self {
         Self {
-            enclosing: Some(Box::new(parent)),
+            enclosing: Some(parent),
             map: HashMap::new(),
         }
     }
 
     pub fn get(&self, key: &str) -> Option<&Literal> {
-        self.map.get(key)
+        if let Some(lit) = self.map.get(key) {
+            Some(lit)
+        } else {
+            match &self.enclosing {
+                Some(env) => env.get(key),
+                None => None,
+            }
+        }
     }
 
     pub fn define(&mut self, key: String, val: Literal) {
