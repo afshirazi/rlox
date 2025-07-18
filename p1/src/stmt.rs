@@ -26,9 +26,11 @@ impl Stmt {
                 Ok(())
             }
             Stmt::Block(stmts) => {
-                stmts.into_iter().try_for_each(|stmt| stmt.interpret_stmt())?;
+                stmts
+                    .into_iter()
+                    .try_for_each(|stmt| stmt.interpret_stmt())?;
                 Ok(())
-            },
+            }
             Stmt::Var(var, env) => {
                 match var.initializer {
                     Some(expr) => {

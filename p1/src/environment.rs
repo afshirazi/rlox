@@ -23,7 +23,10 @@ impl Environment {
     }
 
     pub fn get(&self, key: &str) -> Option<Literal> {
-        self.map.get(key).map(|lit| lit.clone()).or_else(|| self.enclosing.as_ref()?.borrow().get(key))
+        self.map
+            .get(key)
+            .map(|lit| lit.clone())
+            .or_else(|| self.enclosing.as_ref()?.borrow().get(key))
     }
 
     pub fn define(&mut self, key: String, val: Literal) {

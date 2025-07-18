@@ -63,10 +63,7 @@ impl Parser {
             "Expect ';' after variable declaration",
         )?;
         match initializer {
-            Some(val) => Ok(Stmt::Var(
-                Var::with_init(name, val?),
-                environment.clone(),
-            )),
+            Some(val) => Ok(Stmt::Var(Var::with_init(name, val?), environment.clone())),
             None => Ok(Stmt::Var(Var::new(name), environment.clone())),
         }
     }
@@ -89,7 +86,9 @@ impl Parser {
 
     fn block(&mut self, environment: Rc<RefCell<Environment>>) -> Result<Vec<Stmt>, LoxError> {
         let mut stmts = vec![];
-        let new_env = Rc::new(RefCell::new(Environment::with_enclosing(environment.clone())));
+        let new_env = Rc::new(RefCell::new(Environment::with_enclosing(
+            environment.clone(),
+        )));
 
         while !(self.check(&TokenType::RightBrace) || self.is_at_end()) {
             stmts.push(self.declaration(new_env.clone())?);
@@ -238,10 +237,7 @@ impl Parser {
             self.try_consume(TokenType::RightParen, "')' Expected after expression")?;
             Ok(Expr::Grouping(Grouping::new(Box::new(expr))))
         } else if self.adv_if_match(&[TokenType::Identifier]) {
-            Ok(Expr::Variable(
-                self.previous().clone(),
-                environment.clone(),
-            )) //TODO: replace call to previous().clone() with reference maybe?
+            Ok(Expr::Variable(self.previous().clone(), environment.clone())) //TODO: replace call to previous().clone() with reference maybe?
         } else {
             Err(LoxError::new(
                 self.tokens[self.current as usize].line,
