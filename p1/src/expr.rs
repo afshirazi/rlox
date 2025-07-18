@@ -156,7 +156,6 @@ impl Expr {
                     tokens::Literal::Identifier(i) => map
                         .borrow()
                         .get(i)
-                        .map(|lit| lit.clone())
                         .ok_or("Couldn't find the variable".to_owned()),
                     _ => unreachable!("shouldn't ever be a number/string"),
                 },
