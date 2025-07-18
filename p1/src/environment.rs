@@ -34,6 +34,8 @@ impl Environment {
         if self.map.contains_key(&key) {
             self.map.insert(key, val);
             Ok(())
+        } else if let Some(env) = self.enclosing.as_ref() {
+            env.borrow_mut().assign(key, val)
         } else {
             Err(format!("Undefined variable: {}", key))
         }
