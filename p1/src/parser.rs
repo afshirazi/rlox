@@ -75,6 +75,8 @@ impl Parser {
     fn statement(&mut self) -> Result<Stmt, LoxError> {
         if self.adv_if_match(&[TokenType::Print]) {
             self.print_statement()
+        } else if self.adv_if_match(&[TokenType::LeftBrace]) {
+            Ok(Stmt::Block(self.block()?))
         } else {
             self.expr_statement()
         }
@@ -84,6 +86,20 @@ impl Parser {
         let expr = self.expression()?;
         self.try_consume(TokenType::Semicolon, "Expected semicolon after expression")?;
         Ok(Stmt::Print(expr))
+    }
+
+    fn block(&mut self) -> Result<Vec<Stmt>, LoxError> {
+        let mut stmts = vec![];
+        let enclosing_env_ref = self.environment.clone();
+        self.environment = Rc::new(RefCell::new(Environment::with_enclosing(enclosing_env_ref.clone())));
+
+        while !(self.check(&TokenType::RightBrace) || self.is_at_end()) {
+            stmts.push(self.declaration()?);
+        }
+
+        self.environment = enclosing_env_ref;
+        self.try_consume(TokenType::RightBrace, "Expected '}' after block")?;
+        Ok(stmts)
     }
 
     fn expr_statement(&mut self) -> Result<Stmt, LoxError> {
@@ -103,8 +119,17 @@ impl Parser {
             let value = self.assignment()?;
 
             expr = match expr {
-                Expr::Variable(name, _) => Expr::Assign(Assign::new(name, Box::new(value)), self.environment.clone()),
-                _ => return Err(LoxError::new(self.peek().line, self.current, "".to_owned(), "Invalid assignment target".to_owned())),
+                Expr::Variable(name, _) => {
+                    Expr::Assign(Assign::new(name, Box::new(value)), self.environment.clone())
+                }
+                _ => {
+                    return Err(LoxError::new(
+                        self.peek().line,
+                        self.current,
+                        "".to_owned(),
+                        "Invalid assignment target".to_owned(),
+                    ))
+                }
             }
         }
 

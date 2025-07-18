@@ -9,6 +9,7 @@ use crate::{
 pub enum Stmt {
     Expr(Expr),
     Print(Expr),
+    Block(Vec<Stmt>),
     Var(Var, Rc<RefCell<Environment>>),
 }
 
@@ -24,12 +25,15 @@ impl Stmt {
                 println!("{}", value);
                 Ok(())
             }
+            Stmt::Block(stmts) => {
+                stmts.into_iter().try_for_each(|stmt| stmt.interpret_stmt())?;
+                Ok(())
+            },
             Stmt::Var(var, env) => {
                 match var.initializer {
                     Some(expr) => {
                         let val = expr.interpret_ast()?;
-                        env.borrow_mut()
-                            .define(var.token.lexeme, val)
+                        env.borrow_mut().define(var.token.lexeme, val)
                     }
                     None => env.borrow_mut().define(var.token.lexeme, Literal::Nil),
                 };
