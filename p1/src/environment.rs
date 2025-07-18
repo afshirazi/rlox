@@ -23,14 +23,7 @@ impl Environment {
     }
 
     pub fn get(&self, key: &str) -> Option<&Literal> {
-        if let Some(lit) = self.map.get(key) {
-            Some(lit)
-        } else {
-            match &self.enclosing {
-                Some(env) => env.get(key),
-                None => None,
-            }
-        }
+        self.map.get(key).or_else(|| self.enclosing.as_ref()?.get(key))
     }
 
     pub fn define(&mut self, key: String, val: Literal) {
