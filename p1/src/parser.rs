@@ -11,7 +11,6 @@ use crate::{
 pub struct Parser {
     tokens: Vec<Token>,
     current: u32,
-    environment: Rc<RefCell<Environment>>,
 }
 
 impl Parser {
@@ -19,7 +18,6 @@ impl Parser {
         Self {
             tokens: vec![],
             current: 0,
-            environment: Rc::new(RefCell::new(Environment::new())),
         }
     }
 
@@ -30,8 +28,9 @@ impl Parser {
 
     pub fn parse(&mut self) -> Vec<Result<Stmt, LoxError>> {
         let mut stmts = vec![];
+        let top_level_env = Rc::new(RefCell::new(Environment::new()));
         while !self.is_at_end() {
-            match self.declaration() {
+            match self.declaration(top_level_env.clone()) {
                 Ok(stmt) => stmts.push(Ok(stmt)),
                 Err(e) => {
                     stmts.push(Err(e));
@@ -42,22 +41,22 @@ impl Parser {
         stmts
     }
 
-    fn declaration(&mut self) -> Result<Stmt, LoxError> {
+    fn declaration(&mut self, environment: Rc<RefCell<Environment>>) -> Result<Stmt, LoxError> {
         if self.adv_if_match(&[TokenType::Var]) {
-            self.var_declaration()
+            self.var_declaration(environment)
         } else {
-            self.statement()
+            self.statement(environment)
         }
     }
 
-    fn var_declaration(&mut self) -> Result<Stmt, LoxError> {
+    fn var_declaration(&mut self, environment: Rc<RefCell<Environment>>) -> Result<Stmt, LoxError> {
         let name = self
             .try_consume(TokenType::Identifier, "Expect variable name")?
             .clone();
 
         let initializer = self
             .adv_if_match(&[TokenType::Equal])
-            .then(|| self.expression());
+            .then(|| self.expression(environment.clone()));
 
         self.try_consume(
             TokenType::Semicolon,
@@ -66,61 +65,59 @@ impl Parser {
         match initializer {
             Some(val) => Ok(Stmt::Var(
                 Var::with_init(name, val?),
-                self.environment.clone(),
+                environment.clone(),
             )),
-            None => Ok(Stmt::Var(Var::new(name), self.environment.clone())),
+            None => Ok(Stmt::Var(Var::new(name), environment.clone())),
         }
     }
 
-    fn statement(&mut self) -> Result<Stmt, LoxError> {
+    fn statement(&mut self, environment: Rc<RefCell<Environment>>) -> Result<Stmt, LoxError> {
         if self.adv_if_match(&[TokenType::Print]) {
-            self.print_statement()
+            self.print_statement(environment)
         } else if self.adv_if_match(&[TokenType::LeftBrace]) {
-            Ok(Stmt::Block(self.block()?))
+            Ok(Stmt::Block(self.block(environment)?))
         } else {
-            self.expr_statement()
+            self.expr_statement(environment)
         }
     }
 
-    fn print_statement(&mut self) -> Result<Stmt, LoxError> {
-        let expr = self.expression()?;
+    fn print_statement(&mut self, environment: Rc<RefCell<Environment>>) -> Result<Stmt, LoxError> {
+        let expr = self.expression(environment)?;
         self.try_consume(TokenType::Semicolon, "Expected semicolon after expression")?;
         Ok(Stmt::Print(expr))
     }
 
-    fn block(&mut self) -> Result<Vec<Stmt>, LoxError> {
+    fn block(&mut self, environment: Rc<RefCell<Environment>>) -> Result<Vec<Stmt>, LoxError> {
         let mut stmts = vec![];
-        let enclosing_env_ref = self.environment.clone();
-        self.environment = Rc::new(RefCell::new(Environment::with_enclosing(enclosing_env_ref.clone())));
+        let new_env = Rc::new(RefCell::new(Environment::with_enclosing(environment.clone())));
 
         while !(self.check(&TokenType::RightBrace) || self.is_at_end()) {
-            stmts.push(self.declaration()?);
+            stmts.push(self.declaration(new_env.clone())?);
         }
 
-        self.environment = enclosing_env_ref;
         self.try_consume(TokenType::RightBrace, "Expected '}' after block")?;
         Ok(stmts)
     }
 
-    fn expr_statement(&mut self) -> Result<Stmt, LoxError> {
-        let expr = self.expression()?;
+    fn expr_statement(&mut self, environment: Rc<RefCell<Environment>>) -> Result<Stmt, LoxError> {
+        let expr = self.expression(environment)?;
         self.try_consume(TokenType::Semicolon, "Expected semicolon after expression")?;
         Ok(Stmt::Expr(expr))
     }
 
-    fn expression(&mut self) -> Result<Expr, LoxError> {
-        self.assignment()
+    fn expression(&mut self, environment: Rc<RefCell<Environment>>) -> Result<Expr, LoxError> {
+        self.assignment(environment)
     }
 
-    fn assignment(&mut self) -> Result<Expr, LoxError> {
-        let mut expr = self.equality()?;
+    fn assignment(&mut self, environment: Rc<RefCell<Environment>>) -> Result<Expr, LoxError> {
+        let mut expr = self.equality(environment.clone())?;
 
         if self.adv_if_match(&[TokenType::Equal]) {
-            let value = self.assignment()?;
+            let value = self.assignment(environment.clone())?;
 
             expr = match expr {
                 Expr::Variable(name, _) => {
-                    Expr::Assign(Assign::new(name, Box::new(value)), self.environment.clone())
+                    Expr::Assign(Assign::new(name, Box::new(value)), environment.clone())
                 }
                 _ => {
                     return Err(LoxError::new(
@@ -137,23 +134,23 @@ impl Parser {
     }
 
     // comparison ( (== | !=) comparison ) *
-    fn equality(&mut self) -> Result<Expr, LoxError> {
-        let mut expr = self.comparison()?;
+    fn equality(&mut self, environment: Rc<RefCell<Environment>>) -> Result<Expr, LoxError> {
+        let mut expr = self.comparison(environment.clone())?;
         while self.adv_if_match(&[TokenType::EqualEqual, TokenType::BangEqual]) {
             let op = match self.previous().token_type {
                 TokenType::BangEqual => BinaryOp::BangEqual,
                 TokenType::EqualEqual => BinaryOp::EqualEqual,
                 _ => unreachable!(), // unreachable guaranteed by check in adv_if_match
             };
-            let right = self.comparison()?;
+            let right = self.comparison(environment.clone())?;
             expr = Expr::Binary(Binary::new(Box::new(expr), op, Box::new(right)));
         }
 
         Ok(expr)
     }
 
-    fn comparison(&mut self) -> Result<Expr, LoxError> {
-        let mut expr = self.term()?;
+    fn comparison(&mut self, environment: Rc<RefCell<Environment>>) -> Result<Expr, LoxError> {
+        let mut expr = self.term(environment.clone())?;
 
         while self.adv_if_match(&[
             TokenType::Less,
@@ -168,15 +165,15 @@ impl Parser {
                 TokenType::GreaterEqual => BinaryOp::GreaterEqual,
                 _ => unreachable!(),
             };
-            let right = self.term()?;
+            let right = self.term(environment.clone())?;
             expr = Expr::Binary(Binary::new(Box::new(expr), op, Box::new(right)));
         }
 
         Ok(expr)
     }
 
-    fn term(&mut self) -> Result<Expr, LoxError> {
-        let mut expr = self.factor()?;
+    fn term(&mut self, environment: Rc<RefCell<Environment>>) -> Result<Expr, LoxError> {
+        let mut expr = self.factor(environment.clone())?;
 
         while self.adv_if_match(&[TokenType::Minus, TokenType::Plus]) {
             let op = match self.previous().token_type {
@@ -184,15 +181,15 @@ impl Parser {
                 TokenType::Plus => BinaryOp::Plus,
                 _ => unreachable!(),
             };
-            let right = self.factor()?;
+            let right = self.factor(environment.clone())?;
             expr = Expr::Binary(Binary::new(Box::new(expr), op, Box::new(right)));
         }
 
         Ok(expr)
     }
 
-    fn factor(&mut self) -> Result<Expr, LoxError> {
-        let mut expr = self.unary()?;
+    fn factor(&mut self, environment: Rc<RefCell<Environment>>) -> Result<Expr, LoxError> {
+        let mut expr = self.unary(environment.clone())?;
 
         while self.adv_if_match(&[TokenType::Slash, TokenType::Star]) {
             let op = match self.previous().token_type {
@@ -200,14 +197,14 @@ impl Parser {
                 TokenType::Star => BinaryOp::Star,
                 _ => unreachable!(),
             };
-            let right = self.unary()?;
+            let right = self.unary(environment.clone())?;
             expr = Expr::Binary(Binary::new(Box::new(expr), op, Box::new(right)));
         }
 
         Ok(expr)
     }
 
-    fn unary(&mut self) -> Result<Expr, LoxError> {
+    fn unary(&mut self, environment: Rc<RefCell<Environment>>) -> Result<Expr, LoxError> {
         match self.adv_if_match(&[TokenType::Minus, TokenType::Bang]) {
             true => {
                 let op = match self.previous().token_type {
@@ -215,14 +212,14 @@ impl Parser {
                     TokenType::Bang => UnaryOp::Bang,
                     _ => unreachable!(),
                 };
-                let expr = self.unary()?;
+                let expr = self.unary(environment)?;
                 Ok(Expr::Unary(Unary::new(op, Box::new(expr))))
             }
-            false => self.primary(),
+            false => self.primary(environment),
         }
     }
 
-    fn primary(&mut self) -> Result<Expr, LoxError> {
+    fn primary(&mut self, environment: Rc<RefCell<Environment>>) -> Result<Expr, LoxError> {
         if self.adv_if_match(&[TokenType::False]) {
             Ok(Expr::Literal(Literal::Boolean(false)))
         } else if self.adv_if_match(&[TokenType::True]) {
@@ -237,13 +234,13 @@ impl Parser {
             };
             Ok(Expr::Literal(lit))
         } else if self.adv_if_match(&[TokenType::LeftParen]) {
-            let expr = self.expression()?;
+            let expr = self.expression(environment)?;
             self.try_consume(TokenType::RightParen, "')' Expected after expression")?;
             Ok(Expr::Grouping(Grouping::new(Box::new(expr))))
         } else if self.adv_if_match(&[TokenType::Identifier]) {
             Ok(Expr::Variable(
                 self.previous().clone(),
-                self.environment.clone(),
+                environment.clone(),
             )) //TODO: replace call to previous().clone() with reference maybe?
         } else {
             Err(LoxError::new(
